@@ -19,10 +19,7 @@ if (argv.includes("--version")) {
 } else if (argv[0] === "doctor") {
 	const report = await runDoctor();
 	console.log(JSON.stringify(report, null, 2));
-	process.exitCode =
-		report.codexContract.compatible && report.positAssistant.protocol === "11.0"
-			? 0
-			: 1;
+	process.exitCode = report.positAssistant.protocol === "11.0" ? 0 : 1;
 } else {
 	await runUpstreamCli(argv);
 }

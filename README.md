@@ -86,8 +86,7 @@ connection to ChatGPT/Codex are provided by `openai-oauth`.
 | --- | --- | --- | --- | --- |
 | 0.1.x | 0.9.8 | 11.0 | 2.0.0 | v1 |
 
-The project automatically checks that its requests still match Codex. You can
-run the same check yourself with `posit-codex-gateway doctor`.
+The project checks that its requests still match Codex automatically in CI.
 
 ## Troubleshooting
 
@@ -97,11 +96,9 @@ Run the read-only diagnostic report with:
 posit-codex-gateway doctor
 ```
 
-It reports the installed gateway, Posit Assistant, and `openai-oauth` versions,
-whether the local gateway is healthy, and whether the current Codex request
-contract matches the adapter. It does not read conversations or credentials.
-The contract check may contact GitHub; normal gateway startup does not need
-GitHub access.
+It reports the installed gateway, Posit Assistant, and `openai-oauth` versions
+and whether the local gateway is healthy. It does not read conversations or
+credentials, and it does not require an internet connection.
 
 Common fixes:
 
