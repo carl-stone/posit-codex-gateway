@@ -1,24 +1,45 @@
 # posit-codex-gateway
 
-Use your existing ChatGPT/Codex OAuth session with RStudio Posit Assistant through a small local compatibility gateway.
+Want to use RStudio's Posit Assistant with your existing ChatGPT Plus/Pro subscription? Now you can! [`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth) provides a local server for translating the ChatGPT/Codex desktop app to /v1/responses, and this package provides a thin layer that adapts RStudio's Posit Assistant (v0.9.8) requests to that API.
 
 > **Unofficial community project.** This project is not affiliated with, endorsed by, or supported by Posit or OpenAI.
 
 ## Quick start
 
-Requires Node.js 20 or newer and a ChatGPT/Codex OAuth session already available to [`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth).
+Requires Node.js 20 or newer.
+
+Install the gateway:
 
 ```sh
-npx posit-codex-gateway
+npm install --global posit-codex-gateway openai-oauth
 ```
 
-In RStudio Posit Assistant, configure an OpenAI-compatible provider with this base URL:
+Log in with your ChatGPT or Codex account:
+
+```sh
+openai-oauth login
+```
+
+Start the gateway:
+
+```sh
+posit-codex-gateway
+```
+
+Leave this terminal window open while you use Posit Assistant. To run it in the background instead:
+
+```sh
+posit-codex-gateway > posit-codex-gateway.log 2>&1 &
+```
+
+In RStudio Posit Assistant, add an OpenAI-compatible provider. Set its base URL to:
 
 ```text
 http://127.0.0.1:10532/v1
 ```
 
-No API key is needed by the gateway. If the provider form requires a value, use a local placeholder; `openai-oauth` supplies OAuth to the Codex transport.
+The gateway does not need an API key. If RStudio requires one, enter any placeholder, such as `local`.
+
 
 ## Compatibility
 
@@ -55,13 +76,13 @@ Common checks:
 - **Provider cannot connect:** confirm the base URL is exactly `http://127.0.0.1:10532/v1` and run `doctor`.
 - **Contract drift:** update the adapter allowlists only after checking the corresponding `openai/codex` request type.
 
-## Privacy and local security boundary
+## Network and diagnostics
 
-The gateway binds only to `127.0.0.1`; there is intentionally no `0.0.0.0` option. It rejects non-loopback `Host` and browser `Origin` values and requires JSON content for Responses requests. Treat software running under your local account as trusted: any local process able to reach the port can submit requests through your OAuth session.
+The gateway follows `openai-oauth` network behavior: it defaults to `127.0.0.1` and accepts the same explicit `--host` override. The adapter does not add Host, Origin, or content-type restrictions.
 
 Diagnostics are off by default. Enable metadata-only JSON lines with `--diagnostics` or `POSIT_CODEX_GATEWAY_DIAGNOSTICS=1`. Logged fields are limited to request ID, model, removed field paths, breakpoint count, status, duration, and token usage when safely available. Prompts, content, tool arguments/results, credentials, headers, auth material, and reasoning content are never logged.
 
-OAuth tokens remain managed by `openai-oauth`. Gateway error bodies are deliberately generic and do not expose auth material.
+OAuth tokens and upstream errors remain managed by `openai-oauth`.
 
 ## Development
 

@@ -6,29 +6,34 @@ import {
 import type { AddressInfo } from "node:net";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { createOpenAIOAuthFetchHandler } from "openai-oauth";
+import {
+	createOpenAIOAuthFetchHandler,
+	type OpenAIOAuthServerOptions,
+} from "openai-oauth";
 import type { DiagnosticLogger } from "./diagnostics.js";
 import { createGatewayFetchHandler, type FetchHandler } from "./handler.js";
-import { safeError } from "./security.js";
 
 export const DEFAULT_HOST = "127.0.0.1";
 export const DEFAULT_PORT = 10532;
 
-export type GatewayServerOptions = {
-	port?: number;
+export type GatewayServerOptions = OpenAIOAuthServerOptions & {
 	diagnosticLogger?: DiagnosticLogger;
 	upstreamHandler?: FetchHandler;
 };
 
 export type RunningGateway = {
-	host: typeof DEFAULT_HOST;
+	host: string;
 	port: number;
 	url: string;
 	close: () => Promise<void>;
 };
 
+const toUrlHost = (host: string): string =>
+	host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
+
 const toRequest = (
 	request: IncomingMessage,
+	host: string,
 	port: number,
 	signal: AbortSignal,
 ): Request => {
@@ -43,7 +48,7 @@ const toRequest = (
 		init.duplex = "half";
 	}
 	return new Request(
-		`http://${DEFAULT_HOST}:${port}${request.url ?? "/"}`,
+		`http://${toUrlHost(host)}:${port}${request.url ?? "/"}`,
 		init,
 	);
 };
@@ -72,9 +77,10 @@ const writeResponse = async (
 export const startGatewayServer = async (
 	options: GatewayServerOptions = {},
 ): Promise<RunningGateway> => {
+	const host = options.host ?? DEFAULT_HOST;
 	const port = options.port ?? DEFAULT_PORT;
 	const upstreamHandler =
-		options.upstreamHandler ?? createOpenAIOAuthFetchHandler();
+		options.upstreamHandler ?? createOpenAIOAuthFetchHandler(options);
 	const handler = createGatewayFetchHandler({
 		upstreamHandler,
 		...(options.diagnosticLogger
@@ -91,10 +97,10 @@ export const startGatewayServer = async (
 		});
 		try {
 			await writeResponse(
-				await handler(toRequest(request, port, abort.signal)),
+				await handler(toRequest(request, host, port, abort.signal)),
 				response,
 			);
-		} catch {
+		} catch (error) {
 			if (
 				response.headersSent ||
 				response.writableEnded ||
@@ -104,7 +110,18 @@ export const startGatewayServer = async (
 				return;
 			}
 			await writeResponse(
-				safeError(500, "Unexpected gateway error.", "server_error"),
+				Response.json(
+					{
+						error: {
+							message:
+								error instanceof Error
+									? error.message
+									: "Unexpected server error.",
+							type: "server_error",
+						},
+					},
+					{ status: 500 },
+				),
 				response,
 			);
 		}
@@ -112,16 +129,16 @@ export const startGatewayServer = async (
 
 	await new Promise<void>((resolve, reject) => {
 		server.once("error", reject);
-		server.listen(port, DEFAULT_HOST, () => {
+		server.listen(port, host, () => {
 			server.off("error", reject);
 			resolve();
 		});
 	});
 	const address = server.address() as AddressInfo;
 	return {
-		host: DEFAULT_HOST,
+		host,
 		port: address.port,
-		url: `http://${DEFAULT_HOST}:${address.port}/v1`,
+		url: `http://${toUrlHost(host)}:${address.port}/v1`,
 		close: () =>
 			new Promise<void>((resolve, reject) => {
 				server.close((error) => (error ? reject(error) : resolve()));

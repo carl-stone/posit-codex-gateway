@@ -34,24 +34,55 @@ if (args.includes("--help") || args.includes("-h")) {
 	console.log(`posit-codex-gateway ${packageJson.version}
 
 Usage:
-  posit-codex-gateway [--port 10532] [--diagnostics]
+  posit-codex-gateway [options]
   posit-codex-gateway doctor
 
-The gateway always binds to 127.0.0.1.`);
+Options:
+  --host <host>              Proxy host. Default: 127.0.0.1.
+  --port <port>              Proxy port. Default: 10532.
+  --models <ids>             Comma-separated model ids.
+  --codex-version <version>  Override the Codex client version.
+  --base-url <url>           Override the upstream Codex base URL.
+  --oauth-client-id <id>     Override the OAuth client id.
+  --oauth-token-url <url>    Override the OAuth token URL.
+  --oauth-file <path>        Path to the local auth.json file.
+  --diagnostics              Emit adapter metadata to stderr.`);
 	process.exit(0);
 }
 
-const portIndex = args.indexOf("--port");
-const port = portIndex >= 0 ? Number(args[portIndex + 1]) : DEFAULT_PORT;
+const option = (name: string): string | undefined => {
+	const index = args.indexOf(name);
+	return index >= 0 ? args[index + 1] : undefined;
+};
+
+const portValue = option("--port");
+const port = portValue === undefined ? DEFAULT_PORT : Number(portValue);
 if (!Number.isInteger(port) || port < 0 || port > 65535) {
 	console.error("--port must be an integer between 0 and 65535.");
 	process.exit(2);
 }
+const models = option("--models")
+	?.split(",")
+	.map((model) => model.trim())
+	.filter(Boolean);
+const host = option("--host");
+const codexVersion = option("--codex-version");
+const baseURL = option("--base-url");
+const clientId = option("--oauth-client-id");
+const tokenUrl = option("--oauth-token-url");
+const authFilePath = option("--oauth-file");
 const diagnostics =
 	args.includes("--diagnostics") ||
 	process.env.POSIT_CODEX_GATEWAY_DIAGNOSTICS === "1";
 const gateway = await startGatewayServer({
+	...(host ? { host } : {}),
 	port,
+	...(models?.length ? { models } : {}),
+	...(codexVersion ? { codexVersion } : {}),
+	...(baseURL ? { baseURL } : {}),
+	...(clientId ? { clientId } : {}),
+	...(tokenUrl ? { tokenUrl } : {}),
+	...(authFilePath ? { authFilePath } : {}),
 	...(diagnostics ? { diagnosticLogger: createStderrDiagnosticLogger() } : {}),
 });
 console.log(

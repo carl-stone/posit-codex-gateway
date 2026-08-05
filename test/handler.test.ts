@@ -46,17 +46,20 @@ describe("createGatewayFetchHandler", () => {
 		expect(upstream).toHaveBeenCalledWith(input);
 	});
 
-	test("rejects malformed JSON and non-JSON Responses bodies", async () => {
-		const upstream = vi.fn();
+	test("rejects malformed JSON but does not impose a content-type policy", async () => {
+		const upstream = vi.fn(async () => new Response("ok"));
 		const handler = createGatewayFetchHandler({ upstreamHandler: upstream });
 		expect((await handler(request("{"))).status).toBe(400);
-		const wrongType = new Request("http://127.0.0.1:10532/v1/responses", {
-			method: "POST",
-			headers: { Host: "localhost", "Content-Type": "text/plain" },
-			body: "{}",
-		});
-		expect((await handler(wrongType)).status).toBe(415);
-		expect(upstream).not.toHaveBeenCalled();
+		const nonJsonContentType = new Request(
+			"http://127.0.0.1:10532/v1/responses",
+			{
+				method: "POST",
+				headers: { "Content-Type": "text/plain" },
+				body: "{}",
+			},
+		);
+		expect((await handler(nonJsonContentType)).status).toBe(200);
+		expect(upstream).toHaveBeenCalledOnce();
 	});
 
 	test("preserves cancellation", async () => {
@@ -138,16 +141,25 @@ describe("createGatewayFetchHandler", () => {
 		expect(serialized).not.toContain("secret argument");
 	});
 
-	test("rejects non-loopback Host and Origin", async () => {
+	test("does not add Host or Origin restrictions", async () => {
+		let forwarded: Request | undefined;
 		const handler = createGatewayFetchHandler({
-			upstreamHandler: async () => new Response("ok"),
+			upstreamHandler: async (request) => {
+				forwarded = request;
+				return new Response("ok");
+			},
 		});
-		const badHost = new Request("http://127.0.0.1/v1/models", {
-			headers: { Host: "evil.example" },
+		const input = new Request("http://127.0.0.1/v1/responses", {
+			method: "POST",
+			headers: {
+				Host: "example.test",
+				Origin: "https://example.test",
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({ model: "gpt-5.6-sol" }),
 		});
-		const badOrigin = request({ model: "gpt-5.6-sol" });
-		badOrigin.headers.set("Origin", "https://evil.example");
-		expect((await handler(badHost)).status).toBe(403);
-		expect((await handler(badOrigin)).status).toBe(403);
+		expect((await handler(input)).status).toBe(200);
+		expect(forwarded?.headers.get("host")).toBe("example.test");
+		expect(forwarded?.headers.get("origin")).toBe("https://example.test");
 	});
 });

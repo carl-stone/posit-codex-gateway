@@ -1,11 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { adaptResponsesBody, isJsonObject } from "./adapter.js";
 import { type DiagnosticLogger, extractUsage } from "./diagnostics.js";
-import {
-	isJsonContentType,
-	safeError,
-	validateLocalRequest,
-} from "./security.js";
 
 export type FetchHandler = (request: Request) => Promise<Response>;
 
@@ -23,37 +18,19 @@ export const createGatewayFetchHandler = (
 	const createRequestId = options.requestId ?? randomUUID;
 
 	return async (request) => {
-		const trustError = validateLocalRequest(request);
-		if (trustError) return trustError;
-
 		const url = new URL(request.url);
 		if (request.method !== "POST" || url.pathname !== "/v1/responses") {
 			return options.upstreamHandler(request);
-		}
-		if (!isJsonContentType(request.headers.get("content-type"))) {
-			return safeError(
-				415,
-				"Responses requests require an application/json content type.",
-				"unsupported_media_type",
-			);
 		}
 
 		let parsed: unknown;
 		try {
 			parsed = await request.json();
 		} catch {
-			return safeError(
-				400,
-				"Request body must be valid JSON.",
-				"invalid_request_error",
-			);
+			return errorResponse("Request body must be valid JSON.", 400);
 		}
 		if (!isJsonObject(parsed)) {
-			return safeError(
-				400,
-				"Request body must be a JSON object.",
-				"invalid_request_error",
-			);
+			return errorResponse("Request body must be a JSON object.", 400);
 		}
 
 		const adaptation = adaptResponsesBody(parsed);
@@ -120,3 +97,9 @@ export const createGatewayFetchHandler = (
 		}
 	};
 };
+
+const errorResponse = (message: string, status: number): Response =>
+	Response.json(
+		{ error: { message, type: "invalid_request_error" } },
+		{ status },
+	);

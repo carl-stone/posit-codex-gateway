@@ -8,6 +8,18 @@ afterEach(async () => {
 });
 
 describe("Node HTTP bridge", () => {
+	test("accepts the same explicit host override as openai-oauth", async () => {
+		const server = await startGatewayServer({
+			host: "0.0.0.0",
+			port: 0,
+			upstreamHandler: async () => Response.json({ ok: true }),
+		});
+		running.push(server);
+		expect(server.host).toBe("0.0.0.0");
+		const response = await fetch(`http://127.0.0.1:${server.port}/v1/models`);
+		expect(response.status).toBe(200);
+	});
+
 	test("preserves streaming bytes and non-stream responses", async () => {
 		const streamBody =
 			'event: response.output_text.delta\ndata: {"delta":"hello"}\n\n';
