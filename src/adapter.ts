@@ -23,6 +23,11 @@ const REASONING_FIELDS = new Set(["effort", "summary", "context"]);
 const STREAM_OPTIONS_FIELDS = new Set(["reasoning_summary_delivery"]);
 const TEXT_FIELDS = new Set(["verbosity", "format"]);
 const TEXT_FORMAT_FIELDS = new Set(["type", "strict", "schema", "name"]);
+const SAFE_REMOVED_ROOT_FIELDS = new Set([
+	"previous_response_id",
+	"prompt_cache_options",
+	"prompt_cache_retention",
+]);
 
 export type ResponsesAdaptation = {
 	body: Record<string, unknown>;
@@ -34,37 +39,54 @@ export type ResponsesAdaptation = {
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null && !Array.isArray(value);
 
-const formatPath = (parts: Array<string | number>): string =>
-	parts
-		.map((part, index) =>
-			typeof part === "number" ? "[]" : index === 0 ? part : `.${part}`,
-		)
-		.join("");
-
 const removeBreakpoints = (
 	value: unknown,
-	path: Array<string | number>,
 	removed: Set<string>,
 	counter: { value: number },
 ): unknown => {
-	if (Array.isArray(value)) {
-		return value.map((item, index) =>
-			removeBreakpoints(item, [...path, index], removed, counter),
-		);
-	}
-	if (!isRecord(value)) return value;
+	if (!Array.isArray(value) && !isRecord(value)) return value;
 
-	const copy: Record<string, unknown> = {};
-	for (const [key, item] of Object.entries(value)) {
-		const itemPath = [...path, key];
-		if (key === "prompt_cache_breakpoint") {
-			counter.value += 1;
-			removed.add(formatPath(itemPath));
+	type Container = unknown[] | Record<string, unknown>;
+	const root: Container = Array.isArray(value) ? [] : {};
+	const pending: Array<{ source: Container; target: Container }> = [
+		{ source: value, target: root },
+	];
+
+	while (pending.length > 0) {
+		const current = pending.pop();
+		if (!current) break;
+		if (Array.isArray(current.source) && Array.isArray(current.target)) {
+			for (const item of current.source) {
+				if (Array.isArray(item) || isRecord(item)) {
+					const child: Container = Array.isArray(item) ? [] : {};
+					current.target.push(child);
+					pending.push({ source: item, target: child });
+				} else {
+					current.target.push(item);
+				}
+			}
 			continue;
 		}
-		copy[key] = removeBreakpoints(item, itemPath, removed, counter);
+
+		if (!Array.isArray(current.source) && !Array.isArray(current.target)) {
+			for (const [key, item] of Object.entries(current.source)) {
+				if (key === "prompt_cache_breakpoint") {
+					counter.value += 1;
+					removed.add("**.prompt_cache_breakpoint");
+					continue;
+				}
+				if (Array.isArray(item) || isRecord(item)) {
+					const child: Container = Array.isArray(item) ? [] : {};
+					current.target[key] = child;
+					pending.push({ source: item, target: child });
+				} else {
+					current.target[key] = item;
+				}
+			}
+		}
 	}
-	return copy;
+
+	return root;
 };
 
 const filterRecord = (
@@ -77,7 +99,7 @@ const filterRecord = (
 	const copy: Record<string, unknown> = {};
 	for (const [key, item] of Object.entries(value)) {
 		if (!allowed.has(key)) {
-			removed.add(`${path}.${key}`);
+			removed.add(`${path}.*`);
 			continue;
 		}
 		copy[key] = item;
@@ -92,7 +114,6 @@ export const adaptResponsesBody = (
 	const counter = { value: 0 };
 	const recursivelyCleaned = removeBreakpoints(
 		body,
-		[],
 		removed,
 		counter,
 	) as Record<string, unknown>;
@@ -100,7 +121,7 @@ export const adaptResponsesBody = (
 
 	for (const [key, value] of Object.entries(recursivelyCleaned)) {
 		if (!ROOT_FIELDS.has(key)) {
-			removed.add(key);
+			removed.add(SAFE_REMOVED_ROOT_FIELDS.has(key) ? key : "$.*");
 			continue;
 		}
 		adapted[key] = value;

@@ -9,15 +9,3 @@ export {
 	type DiagnosticEvent,
 	type DiagnosticLogger,
 } from "./diagnostics.js";
-export {
-	createGatewayFetchHandler,
-	type FetchHandler,
-	type GatewayHandlerOptions,
-} from "./handler.js";
-export {
-	DEFAULT_HOST,
-	DEFAULT_PORT,
-	type GatewayServerOptions,
-	type RunningGateway,
-	startGatewayServer,
-} from "./server.js";

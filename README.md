@@ -11,13 +11,13 @@ Requires Node.js 20 or newer.
 Install the gateway:
 
 ```sh
-npm install --global posit-codex-gateway openai-oauth
+npm install --global posit-codex-gateway
 ```
 
 Log in with your ChatGPT or Codex account:
 
 ```sh
-openai-oauth login
+posit-codex-gateway login
 ```
 
 Start the gateway:
@@ -53,7 +53,7 @@ The gateway does not need an API key. If RStudio requires one, enter any placeho
 
 | posit-codex-gateway | Posit Assistant | RStudio protocol | openai-oauth | Codex Responses contract |
 | --- | --- | --- | --- | --- |
-| 0.1.x | 0.9.8 | 11.0 | 2.x (developed with 2.0.0) | Adapter v1, checked in CI |
+| 0.1.x | 0.9.8 | 11.0 | 2.0.0 | Adapter v1, checked in CI |
 
 Posit Assistant 0.9.8 sends the full conversation and tool history on each turn. The gateway therefore uses `openai-oauth`'s default stateless Responses path and does not keep continuation memory.
 
@@ -84,7 +84,7 @@ npx posit-codex-gateway doctor
 Common checks:
 
 - **Port already in use:** stop the existing gateway or run `npx posit-codex-gateway --port 10533` and update the provider URL.
-- **OAuth/login problem:** run `npx openai-oauth login`, then restart the gateway.
+- **OAuth/login problem:** run `npx posit-codex-gateway login`, then restart the gateway.
 - **Provider cannot connect:** confirm the base URL is exactly `http://127.0.0.1:10532/v1` and run `doctor`.
 - **Contract drift:** update the adapter allowlists only after checking the corresponding `openai/codex` request type.
 
@@ -92,7 +92,7 @@ Common checks:
 
 The gateway follows `openai-oauth` network behavior: it defaults to `127.0.0.1` and accepts the same explicit `--host` override. The adapter does not add Host, Origin, or content-type restrictions.
 
-Diagnostics are off by default. Enable metadata-only JSON lines with `--diagnostics` or `POSIT_CODEX_GATEWAY_DIAGNOSTICS=1`. Logged fields are limited to request ID, model, removed field paths, breakpoint count, status, duration, and token usage when safely available. Prompts, content, tool arguments/results, credentials, headers, auth material, and reasoning content are never logged.
+Diagnostics are off by default. Enable metadata-only JSON lines with `--diagnostics` or `POSIT_CODEX_GATEWAY_DIAGNOSTICS=1`. Logged fields are limited to request ID, model, schema-only removed-field patterns, breakpoint count, status, duration, and token usage when safely available. User-defined property names are redacted. Prompts, content, tool arguments/results, credentials, headers, auth material, and reasoning content are never logged.
 
 OAuth tokens and upstream errors remain managed by `openai-oauth`.
 

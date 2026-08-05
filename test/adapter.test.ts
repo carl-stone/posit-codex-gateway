@@ -19,15 +19,14 @@ describe("adaptResponsesBody", () => {
 		expect(request).toEqual(original);
 		expect(adapted.promptCacheBreakpointCount).toBe(3);
 		expect(adapted.removedFieldPaths).toEqual([
-			"input[].content[].prompt_cache_breakpoint",
-			"input[].output.prompt_cache_breakpoint",
-			"metadata",
+			"$.*",
+			"**.prompt_cache_breakpoint",
 			"prompt_cache_options",
 			"prompt_cache_retention",
-			"reasoning.unsupported",
-			"stream_options.include_usage",
-			"text.format.description",
-			"text.unsupported",
+			"reasoning.*",
+			"stream_options.*",
+			"text.*",
+			"text.format.*",
 		]);
 		expect(adapted.body.prompt_cache_key).toBe("posit-session");
 		expect(adapted.body.reasoning).toEqual({
@@ -62,10 +61,7 @@ describe("adaptResponsesBody", () => {
 		};
 		const adapted = adaptResponsesBody(request);
 		expect(adapted.promptCacheBreakpointCount).toBe(3);
-		expect(adapted.removedFieldPaths).toEqual([
-			"input[].nested[].prompt_cache_breakpoint",
-			"prompt_cache_breakpoint",
-		]);
+		expect(adapted.removedFieldPaths).toEqual(["**.prompt_cache_breakpoint"]);
 		expect(request.input[0]?.nested[0]?.prompt_cache_breakpoint).toBe(1);
 	});
 
@@ -90,9 +86,26 @@ describe("adaptResponsesBody", () => {
 		});
 		expect(adapted.removedFieldPaths).toEqual([
 			"previous_response_id",
-			"stream_options.unknown",
-			"text.format.extra",
-			"text.unknown",
+			"stream_options.*",
+			"text.*",
+			"text.format.*",
 		]);
+	});
+
+	test("handles deeply nested input without recursion and redacts property names", () => {
+		const secretKey = "SECRET_TOOL_RESULT_KEY";
+		const request: Record<string, unknown> = { input: {} };
+		let cursor = request.input as Record<string, unknown>;
+		for (let depth = 0; depth < 20_000; depth += 1) {
+			const child: Record<string, unknown> = {};
+			cursor.next = child;
+			cursor = child;
+		}
+		cursor[secretKey] = { prompt_cache_breakpoint: true };
+
+		const adapted = adaptResponsesBody(request);
+		expect(adapted.promptCacheBreakpointCount).toBe(1);
+		expect(adapted.removedFieldPaths).toEqual(["**.prompt_cache_breakpoint"]);
+		expect(JSON.stringify(adapted.removedFieldPaths)).not.toContain(secretKey);
 	});
 });

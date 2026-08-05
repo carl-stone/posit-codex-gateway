@@ -6,21 +6,37 @@ import { adaptResponsesBody, isJsonObject } from "./adapter.js";
 import {
 	createStderrDiagnosticLogger,
 	type DiagnosticLogger,
+	extractUsage,
 } from "./diagnostics.js";
-import { DEFAULT_PORT } from "./server.js";
+
+const DEFAULT_PORT = 10532;
 
 const UPSTREAM_RUNTIME_DIRECTORY_VARIABLE = "OPENAI_OAUTH_INTERNAL_RUNTIME_DIR";
 const GATEWAY_RUNTIME_DIRECTORY_VARIABLE =
 	"POSIT_CODEX_GATEWAY_INTERNAL_RUNTIME_DIR";
 
-export const brandUpstreamCliText = (text: string): string =>
-	text
+export const brandUpstreamCliText = (text: string): string => {
+	const help =
+		text.startsWith("Free OpenAI API access with your ChatGPT account.") &&
+		text.includes("\nUsage\n");
+	const branded = help
+		? text.replaceAll(
+				"npx openai-oauth@latest",
+				"npx posit-codex-gateway@latest",
+			)
+		: text;
+	return branded
 		.replace(
 			"Free OpenAI API access with your ChatGPT account.",
 			"Use RStudio Posit Assistant with your ChatGPT account.",
 		)
-		.replaceAll("npx openai-oauth", "npx posit-codex-gateway")
-		.replaceAll("OpenAI OAuth", "Posit Codex Gateway")
+		.replaceAll("npx openai-oauth stop", "npx posit-codex-gateway stop")
+		.replaceAll("npx openai-oauth logs", "npx posit-codex-gateway logs")
+		.replaceAll("npx openai-oauth login", "npx posit-codex-gateway login")
+		.replace(
+			"Start with `npx openai-oauth`",
+			"Start with `npx posit-codex-gateway`",
+		)
 		.replaceAll("Proxy port. Default: 10531.", "Proxy port. Default: 10532.")
 		.replace(
 			"  npx posit-codex-gateway@latest login [options]",
@@ -31,6 +47,7 @@ export const brandUpstreamCliText = (text: string): string =>
 			"  --login-timeout-ms <ms>    Login timeout. Default: 300000\n  --diagnostics              Emit adapter metadata to stderr.",
 		)
 		.replace(/Show version \([^)]+\)/g, "Show gateway version");
+};
 
 const installCliOutputBranding = (): void => {
 	const log = console.log.bind(console);
@@ -166,20 +183,43 @@ export const installUpstreamFetchAdapter = (
 	globalThis.fetch = async (input, init) => {
 		const startedAt = Date.now();
 		const adapted = await adaptedFetchInput(input, init, logger);
-		const response = await upstreamFetch(
-			adapted?.input ?? input,
-			adapted?.init ?? init,
-		);
-		if (adapted && logger) {
-			logger({
-				type: "responses_response",
-				requestId: adapted.requestId,
-				model: adapted.model,
-				status: response.status,
-				durationMs: Date.now() - startedAt,
-			});
+		try {
+			const response = await upstreamFetch(
+				adapted?.input ?? input,
+				adapted?.init ?? init,
+			);
+			if (adapted && logger) {
+				const event = {
+					type: "responses_response" as const,
+					requestId: adapted.requestId,
+					model: adapted.model,
+					status: response.status,
+					durationMs: Date.now() - startedAt,
+				};
+				const contentType = response.headers.get("content-type") ?? "";
+				if (!contentType.includes("text/event-stream")) {
+					void response
+						.clone()
+						.json()
+						.then((body) => logger({ ...event, usage: extractUsage(body) }))
+						.catch(() => logger(event));
+				} else {
+					logger(event);
+				}
+			}
+			return response;
+		} catch (error) {
+			if (adapted && logger) {
+				logger({
+					type: "responses_error",
+					requestId: adapted.requestId,
+					model: adapted.model,
+					status: 0,
+					durationMs: Date.now() - startedAt,
+				});
+			}
+			throw error;
 		}
-		return response;
 	};
 	return () => {
 		globalThis.fetch = upstreamFetch;
