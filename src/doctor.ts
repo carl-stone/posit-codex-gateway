@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import os from "node:os";
@@ -22,12 +23,14 @@ const packageRoot = path.resolve(
 const require = createRequire(import.meta.url);
 
 const resolveOAuthPackageJson = (): string | undefined => {
-	for (const packageName of [
-		"openai-oauth/package.json",
-		"@carl-stone/openai-oauth/package.json",
-	]) {
+	for (const packageName of ["openai-oauth", "@carl-stone/openai-oauth"]) {
 		try {
-			return require.resolve(packageName);
+			let directory = path.dirname(require.resolve(packageName));
+			while (directory !== path.dirname(directory)) {
+				const candidate = path.join(directory, "package.json");
+				if (existsSync(candidate)) return candidate;
+				directory = path.dirname(directory);
+			}
 		} catch {
 			// Try the next install layout.
 		}
