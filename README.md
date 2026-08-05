@@ -1,9 +1,8 @@
 # posit-codex-gateway
 
-Use your existing ChatGPT/Codex sign-in with RStudio Posit Assistant.
+Use your existing ChatGPT/Codex subscription sign-in with RStudio Posit Assistant.
 
-`posit-codex-gateway` is a small local bridge. It starts the official
-[`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth) server and makes
+`posit-codex-gateway` is a small local bridge. It starts the official [`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth) server and makes
 the one request-format adjustment needed by Posit Assistant.
 
 > **Unofficial community project.** This project is not affiliated with,
@@ -13,9 +12,9 @@ the one request-format adjustment needed by Posit Assistant.
 
 You need:
 
-- Node.js 20 or newer;
+- [Node.js 20 or newer](https://nodejs.org/en/download);
 - RStudio with Posit Assistant 0.9.8 (RStudio protocol 11.0); and
-- a ChatGPT/Codex account that can sign in through `openai-oauth`.
+- a ChatGPT/Codex Plus or Pro subscription.
 
 This gateway uses your ChatGPT/Codex sign-in. You do not need an OpenAI API
 key.
@@ -42,13 +41,13 @@ posit-codex-gateway --detach
 
 ### Connect Posit Assistant
 
-In RStudio, add or select an OpenAI-compatible provider for Posit Assistant.
+In RStudio, add an OpenAI-compatible provider for Posit Assistant.
 Use these settings:
 
 | Setting | Value |
 | --- | --- |
 | Base URL | `http://127.0.0.1:10532/v1` |
-| API key | Any placeholder, such as `local` |
+| API key | Leave empty |
 
 The gateway supplies the models available through your ChatGPT/Codex account.
 
