@@ -3,8 +3,7 @@
 Love Codex models, hate Codex API prices? ☀️ 🌍 🌙
 Use your existing ChatGPT/Codex subscription sign-in with RStudio Posit Assistant.
 
-`posit-codex-gateway` is a small local bridge. It starts the official [`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth) server and makes
-the one request-format adjustment needed by Posit Assistant.
+`posit-codex-gateway` is a small local bridge between [`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth) and the Posit Assistant interface for RStudio. `openai-oauth` runs a local (by default) server to use the ChatGPT desktop app as a `/responses` API endpoint. This package extends that server to work with the particular quirks of how Posit Assistant calls that API. `openai-oauth` is installed with this package and all of its command-line arguments are retained, but call it separately if you want to set up an API server not for Posit Assistant.
 
 > **Unofficial community project.** This project is not affiliated with,
 > endorsed by, or supported by Posit or OpenAI.
@@ -17,13 +16,11 @@ You need:
 - RStudio with Posit Assistant 0.9.8 (RStudio protocol 11.0); and
 - a ChatGPT/Codex Plus or Pro subscription.
 
-This gateway uses your ChatGPT/Codex sign-in. You do not need an OpenAI API
-key.
+This gateway uses your ChatGPT/Codex sign-in. You do not need an OpenAI API key.
 
 ## Quick start
 
-Install Node.js first if it is not already installed. Then run these commands
-in a Terminal window:
+With Node.js installed, run these commands in a Terminal window:
 
 ```sh
 npm install --global posit-codex-gateway
@@ -34,7 +31,7 @@ posit-codex-gateway
 The last command keeps the gateway running in the foreground. Leave that
 Terminal window open while you use Posit Assistant.
 
-To run it in the background instead, use:
+Or, to run it in the background instead, use:
 
 ```sh
 posit-codex-gateway --detach
@@ -73,7 +70,7 @@ The gateway connects Posit Assistant to your ChatGPT/Codex session and handles
 the request-format differences automatically. There is nothing special to
 configure in Posit Assistant beyond the local base URL shown above.
 
-Your conversation is sent to ChatGPT/Codex as part of each request, but the
+Your conversation is sent to ChatGPT/Codex as part of each request, and the
 gateway does not keep its own conversation history or memory. Messages,
 images, reasoning, tools, tool calls and results, and streaming responses are
 supported.
