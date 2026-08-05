@@ -40,7 +40,7 @@
     "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run test:cli"
   },
   "dependencies": {
-    "openai-oauth": "npm:@carl-stone/openai-oauth@2.0.0-memory.1"
+    "openai-oauth": "npm:@carl-stone/openai-oauth@2.0.0-memory.2"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.0",
