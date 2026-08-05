@@ -35,11 +35,12 @@
     "lint": "biome check src test scripts",
     "prepack": "npm run verify",
     "test": "vitest run",
+    "test:cli": "tsx scripts/test-cli-lifecycle.ts",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run build"
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run test:cli"
   },
   "dependencies": {
-    "openai-oauth": "^2.0.0"
+    "openai-oauth": "2.0.0"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.2.0",

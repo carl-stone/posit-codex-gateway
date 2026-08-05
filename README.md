@@ -29,7 +29,15 @@ posit-codex-gateway
 Leave this terminal window open while you use Posit Assistant. To run it in the background instead:
 
 ```sh
-posit-codex-gateway > posit-codex-gateway.log 2>&1 &
+posit-codex-gateway --detach
+```
+
+The gateway preserves the `openai-oauth` CLI lifecycle:
+
+```sh
+posit-codex-gateway status
+posit-codex-gateway logs --follow
+posit-codex-gateway stop
 ```
 
 In RStudio Posit Assistant, add an OpenAI-compatible provider. Set its base URL to:
@@ -57,9 +65,13 @@ Posit 0.9.8 emits explicit prompt-cache controls. The current ChatGPT/Codex Resp
 - removes `prompt_cache_options`, deprecated `prompt_cache_retention`, and every recursive `prompt_cache_breakpoint`;
 - allowlists the current Codex root contract and supported nested reasoning, streaming, and text-format controls;
 - preserves messages, image inputs, tools, tool calls, tool arguments/results, `reasoning.encrypted_content`, and streaming; and
-- passes the adapted `Request` to `openai-oauth`'s official `createOpenAIOAuthFetchHandler()`.
+- delegates the CLI and server to `openai-oauth`, while adapting only its outbound Codex Responses fetch.
 
 Every other route—including OAuth handling, models, chat completions, and images—is delegated directly to `openai-oauth`. Upstream continues to enforce its normal `store: false`, encrypted-reasoning, and streaming transport behavior.
+
+## CLI compatibility
+
+The gateway supports the same public commands and options as `openai-oauth` 2.0.0: foreground and detached serving, `status`, `logs`, `stop`, `login`, `--host`, `--port`, model and Codex overrides, OAuth overrides, browser control, and login timeout. The only intentional default difference is port 10532, which matches the RStudio provider configuration, instead of upstream's port 10531. `doctor` and `--diagnostics` are gateway-specific additions.
 
 ## Doctor and troubleshooting
 
