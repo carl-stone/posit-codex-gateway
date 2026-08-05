@@ -1,9 +1,6 @@
-posit-codex-gateway
-Copyright 2026 Carl Stone
+OpenAI OAuth
+Copyright 2026 Evan Zhou and OpenAI OAuth contributors
 
-This product depends on openai-oauth, developed by Evan Zhou and contributors,
-and includes rewritten request-adaptation logic derived from Apache-2.0-licensed
-work in carl-stone/openai-oauth.
+https://github.com/EvanZhouDev/openai-oauth
 
-openai-oauth: https://github.com/EvanZhouDev/openai-oauth
-carl-stone/openai-oauth: https://github.com/carl-stone/openai-oauth
+This product is licensed under the Apache License, Version 2.0.

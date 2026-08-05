@@ -39,15 +39,15 @@ posit-codex-gateway --detach
 
 ### Connect Posit Assistant
 
-In RStudio, add an OpenAI-compatible provider for Posit Assistant.
-Use these settings:
+In the Posit Assistant pane in RStudio, select the gear > Configure LLM providers > OpenAI.
+Change the Base URL and API key to:
 
 | Setting | Value |
 | --- | --- |
 | Base URL | `http://127.0.0.1:10532/v1` |
 | API key | Leave empty |
 
-The gateway supplies the models available through your ChatGPT/Codex account.
+The gateway supplies all models available through your ChatGPT/Codex account.
 
 ## Start, check, and stop the gateway
 
@@ -68,7 +68,7 @@ change the provider's base URL to match.
 
 The gateway connects Posit Assistant to your ChatGPT/Codex session and handles
 the request-format differences automatically. There is nothing special to
-configure in Posit Assistant beyond the local base URL shown above.
+configure in Posit Assistant beyond the local base URL shown above. I have not used ChatGPT models in Posit 
 
 Your conversation is sent to ChatGPT/Codex as part of each request, and the
 gateway does not keep its own conversation history or memory. Messages,
@@ -96,17 +96,17 @@ posit-codex-gateway doctor
 
 It reports the installed gateway, Posit Assistant, and `openai-oauth` versions
 and whether the local gateway is healthy. It does not read conversations or
-credentials, and it does not require an internet connection.
+credentials.
 
 Common fixes:
 
 - **RStudio cannot connect:** make sure the gateway is running and the base URL
   is exactly `http://127.0.0.1:10532/v1`.
 - **The port is busy:** stop the other process, or start with
-  `posit-codex-gateway --port 10533` and update the base URL.
+  `posit-codex-gateway --port <number>` and update the base URL.
 - **Sign-in fails:** run `posit-codex-gateway login` again, then restart the
   gateway.
-- **A background gateway is confusing:** run `status`, inspect `logs`, then
+- **The background gateway isn't working:** run `status`, inspect `logs`, then
   use `stop` before starting it again.
 
 ## Privacy and network behavior
@@ -121,9 +121,6 @@ metadata only: request ID, model, schema-only removed-field patterns, cache
 breakpoint count, status, duration, and safely available token counts. Prompts,
 conversation content, tool arguments/results, credentials, headers, auth
 material, and reasoning content are not logged.
-
-The gateway is a local bridge, not a hosted proxy. Its local trust boundary is
-your computer and any interface you explicitly expose with `--host`.
 
 ## Advanced CLI options
 
@@ -151,9 +148,9 @@ the npm and GitHub Actions dependencies.
 
 ## Credits and license
 
-Built around [`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth) by
-Evan Zhou. The Posit request-adaptation logic was extracted and rewritten from
-Apache-2.0 work developed in the `carl-stone/openai-oauth` fork; see
-[NOTICE](NOTICE).
+This project uses [`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth)
+by Evan Zhou and the OpenAI OAuth contributors. Its required attribution notice
+is included in [NOTICE](NOTICE).
 
-Licensed under Apache-2.0.
+The original gateway code in this repository is copyright Carl Stone and is
+licensed under Apache-2.0. See [LICENSE](LICENSE).
