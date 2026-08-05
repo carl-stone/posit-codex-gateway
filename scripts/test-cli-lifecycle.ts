@@ -16,6 +16,7 @@ const env = {
 	POSIT_CODEX_GATEWAY_INTERNAL_RUNTIME_DIR: runtimeDirectory,
 };
 const receivedBodies: Array<Record<string, unknown>> = [];
+let responseRequestCount = 0;
 const codexServer = createServer((request, response) => {
 	if (request.method !== "POST" || request.url !== "/responses") {
 		response.writeHead(404, { "content-type": "application/json" });
@@ -25,6 +26,7 @@ const codexServer = createServer((request, response) => {
 	const chunks: Buffer[] = [];
 	request.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
 	request.on("end", () => {
+		responseRequestCount += 1;
 		receivedBodies.push(
 			JSON.parse(Buffer.concat(chunks).toString("utf8")) as Record<
 				string,
@@ -32,8 +34,19 @@ const codexServer = createServer((request, response) => {
 			>,
 		);
 		response.writeHead(200, { "content-type": "text/event-stream" });
+		if (responseRequestCount === 1) {
+			response.end(
+				[
+					'event: response.created\ndata: {"type":"response.created","response":{"id":"resp_test","status":"in_progress"}}',
+					'event: response.output_item.done\ndata: {"type":"response.output_item.done","output_index":0,"item":{"type":"function_call","id":"fc_test","call_id":"call_test","name":"inspect_environment","arguments":"{}","status":"completed"}}',
+					'event: response.completed\ndata: {"type":"response.completed","response":{"id":"resp_test","status":"completed","output":[]}}',
+					"",
+				].join("\n\n"),
+			);
+			return;
+		}
 		response.end(
-			'data: {"type":"response.completed","response":{"id":"resp_test"}}\n\n',
+			'event: response.completed\ndata: {"type":"response.completed","response":{"id":"resp_done","status":"completed","output":[]}}\n\n',
 		);
 	});
 });
@@ -122,6 +135,38 @@ try {
 		JSON.stringify(forwardedBody).includes("prompt_cache_breakpoint")
 	) {
 		throw new Error("Detached gateway did not apply the Posit adapter.");
+	}
+
+	const continuationResponse = await fetch(`${gatewayUrl}/responses`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify({
+			model: "gpt-5.6-sol",
+			input: [
+				{ type: "item_reference", id: "fc_test" },
+				{
+					type: "function_call_output",
+					call_id: "call_test",
+					output: '{"objects":["fit","counts"]}',
+				},
+			],
+			stream: true,
+		}),
+	});
+	if (!continuationResponse.ok) {
+		throw new Error(
+			`Detached gateway rejected a tool continuation with HTTP ${continuationResponse.status}.`,
+		);
+	}
+	await continuationResponse.text();
+	const continuedBody = receivedBodies[1];
+	if (
+		!continuedBody ||
+		JSON.stringify(continuedBody).includes("item_reference") ||
+		!JSON.stringify(continuedBody).includes('"function_call"') ||
+		!JSON.stringify(continuedBody).includes('"function_call_output"')
+	) {
+		throw new Error("Detached gateway did not replay the tool continuation.");
 	}
 
 	const status = await run(["status"]);

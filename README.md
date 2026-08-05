@@ -3,7 +3,10 @@
 Love Codex models, hate Codex API prices? ☀️ 🌍 🌙
 Use your existing ChatGPT/Codex subscription sign-in with RStudio Posit Assistant.
 
-`posit-codex-gateway` is a small local bridge between [`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth) and the Posit Assistant interface for RStudio. `openai-oauth` runs a local (by default) server to use the ChatGPT desktop app as a `/responses` API endpoint. This package extends that server to work with the particular quirks of how Posit Assistant calls that API. `openai-oauth` is installed with this package and all of its command-line arguments are retained, but call it separately if you want to set up an API server not for Posit Assistant.
+`posit-codex-gateway` is a small local bridge between RStudio and
+[`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth). It signs in with
+your ChatGPT account and adjusts Posit Assistant requests so they work with the
+Codex Responses service.
 
 > **Unofficial community project.** This project is not affiliated with,
 > endorsed by, or supported by Posit or OpenAI.
@@ -68,21 +71,21 @@ change the provider's base URL to match.
 
 The gateway connects Posit Assistant to your ChatGPT/Codex session and handles
 the request-format differences automatically. There is nothing special to
-configure in Posit Assistant beyond the local base URL shown above. I have not used ChatGPT models in Posit 
+configure in Posit Assistant beyond the local base URL shown above.
 
-Your conversation is sent to ChatGPT/Codex as part of each request, and the
-gateway does not keep its own conversation history or memory. Messages,
-images, reasoning, tools, tool calls and results, and streaming responses are
-supported.
+Messages, images, reasoning, tools, tool calls and results, and streaming
+responses are supported. The gateway keeps a temporary, in-memory record of
+recent Responses items so Posit Assistant can continue after a tool call. This
+record is not written to disk and disappears when the gateway stops.
 
 Sign-in, model discovery, chat and image requests, OAuth refresh, and the
 connection to ChatGPT/Codex are provided by `openai-oauth`.
 
 ## Supported versions
 
-| Gateway | Posit Assistant | RStudio protocol | openai-oauth | Responses adapter |
+| Gateway | Posit Assistant | RStudio protocol | OAuth runtime | Responses adapter |
 | --- | --- | --- | --- | --- |
-| 0.1.x | 0.9.8 | 11.0 | 2.0.0 | v1 |
+| 0.1.x | 0.9.8 | 11.0 | `@carl-stone/openai-oauth` 2.0.0-memory.1 | v1 |
 
 The project checks that its requests still match Codex automatically in CI.
 
@@ -106,6 +109,9 @@ Common fixes:
   `posit-codex-gateway --port <number>` and update the base URL.
 - **Sign-in fails:** run `posit-codex-gateway login` again, then restart the
   gateway.
+- **A conversation fails after restarting the gateway:** start a new Posit
+  Assistant conversation. Temporary tool-continuation state is cleared when
+  the gateway stops.
 - **The background gateway isn't working:** run `status`, inspect `logs`, then
   use `stop` before starting it again.
 
@@ -116,6 +122,9 @@ the same host behavior as `openai-oauth`; an explicit `--host` can make it
 reachable from other interfaces, so use that option only when you intend to.
 
 OAuth credentials and upstream transport are handled by `openai-oauth`.
+Recent Responses items are held only in the running process, with upstream's
+default limits of 256 responses and 2,000 items. They are never persisted by
+the gateway and are discarded when it stops or restarts.
 Diagnostics are off by default. If enabled with `--diagnostics`, they contain
 metadata only: request ID, model, schema-only removed-field patterns, cache
 breakpoint count, status, duration, and safely available token counts. Prompts,
@@ -124,14 +133,17 @@ material, and reasoning content are not logged.
 
 ## Advanced CLI options
 
-The gateway accepts the same public commands and options as
-`openai-oauth` 2.0.0, including `login`, `--host`, `--port`, `--models`,
+The gateway accepts the same public commands and options as its `openai-oauth`
+runtime, including `login`, `--host`, `--port`, `--models`,
 `--codex-version`, `--base-url`, OAuth overrides, `--no-open`, login timeout,
-`--detach`, `status`, `logs`, and `stop`.
+`--detach`, `status`, `logs`, `stop`, `--responses-state`,
+`--responses-max-responses`, and `--responses-max-items`.
 
-The only intentional default difference is the port: this gateway uses
-`10532` instead of `openai-oauth`'s `10531` so it matches the Posit Assistant
-configuration. `doctor` and `--diagnostics` are gateway-specific additions.
+There are two intentional defaults for Posit Assistant: port `10532` and
+process-local Responses memory. You can explicitly override either default,
+although `--responses-state stateless` will prevent Posit tool-call
+continuations from working. `doctor` and `--diagnostics` are gateway-specific
+additions.
 
 ## Development
 
@@ -148,9 +160,11 @@ the npm and GitHub Actions dependencies.
 
 ## Credits and license
 
-This project uses [`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth)
-by Evan Zhou and the OpenAI OAuth contributors. Its required attribution notice
-is included in [NOTICE](NOTICE).
+This project uses a narrowly scoped build of
+[`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth) by Evan Zhou and
+the OpenAI OAuth contributors while its Responses-memory change is pending
+upstream review. The dependency ships its own Apache-2.0 license and notice;
+this repository's required attribution is included in [NOTICE](NOTICE).
 
 The original gateway code in this repository is copyright Carl Stone and is
 licensed under Apache-2.0. See [LICENSE](LICENSE).

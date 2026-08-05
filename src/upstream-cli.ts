@@ -20,10 +20,12 @@ export const brandUpstreamCliText = (text: string): string => {
 		text.startsWith("Free OpenAI API access with your ChatGPT account.") &&
 		text.includes("\nUsage\n");
 	const branded = help
-		? text.replaceAll(
-				"npx openai-oauth@latest",
-				"npx posit-codex-gateway@latest",
-			)
+		? text
+				.replaceAll(
+					"npx @carl-stone/openai-oauth@latest",
+					"npx posit-codex-gateway@latest",
+				)
+				.replaceAll("npx openai-oauth@latest", "npx posit-codex-gateway@latest")
 		: text;
 	return branded
 		.replace(
@@ -33,11 +35,28 @@ export const brandUpstreamCliText = (text: string): string => {
 		.replaceAll("npx openai-oauth stop", "npx posit-codex-gateway stop")
 		.replaceAll("npx openai-oauth logs", "npx posit-codex-gateway logs")
 		.replaceAll("npx openai-oauth login", "npx posit-codex-gateway login")
+		.replaceAll(
+			"npx @carl-stone/openai-oauth stop",
+			"npx posit-codex-gateway stop",
+		)
+		.replaceAll(
+			"npx @carl-stone/openai-oauth logs",
+			"npx posit-codex-gateway logs",
+		)
+		.replaceAll(
+			"npx @carl-stone/openai-oauth login",
+			"npx posit-codex-gateway login",
+		)
 		.replace(
 			"Start with `npx openai-oauth`",
 			"Start with `npx posit-codex-gateway`",
 		)
+		.replace(
+			"Start with `npx @carl-stone/openai-oauth`",
+			"Start with `npx posit-codex-gateway`",
+		)
 		.replaceAll("Proxy port. Default: 10531.", "Proxy port. Default: 10532.")
+		.replace("Default: stateless.", "Default: memory in posit-codex-gateway.")
 		.replace(
 			"  npx posit-codex-gateway@latest login [options]",
 			"  npx posit-codex-gateway@latest login [options]\n  npx posit-codex-gateway@latest doctor",
@@ -99,6 +118,14 @@ export const prepareUpstreamCliArgv = (
 		(argument) => argument === "--port" || argument.startsWith("--port="),
 	);
 	if (serves && !hasPort) forwarded.push("--port", String(DEFAULT_PORT));
+	const hasResponsesState = forwarded.some(
+		(argument) =>
+			argument === "--responses-state" ||
+			argument.startsWith("--responses-state="),
+	);
+	if (serves && !hasResponsesState) {
+		forwarded.push("--responses-state", "memory");
+	}
 	return { argv: forwarded, diagnostics };
 };
 

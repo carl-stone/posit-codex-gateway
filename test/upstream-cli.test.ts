@@ -10,7 +10,7 @@ describe("upstream CLI delegation", () => {
 		vi.unstubAllGlobals();
 	});
 
-	test("forwards CLI arguments unchanged except the RStudio default port", () => {
+	test("forwards CLI arguments with the Posit port and memory defaults", () => {
 		expect(
 			prepareUpstreamCliArgv([
 				"--detach",
@@ -27,10 +27,17 @@ describe("upstream CLI delegation", () => {
 			"gpt-5.6-sol",
 			"--port",
 			"10532",
+			"--responses-state",
+			"memory",
 		]);
 		expect(prepareUpstreamCliArgv(["--port=10533"]).argv).toEqual([
 			"--port=10533",
+			"--responses-state",
+			"memory",
 		]);
+		expect(
+			prepareUpstreamCliArgv(["--responses-state=stateless"]).argv,
+		).toEqual(["--responses-state=stateless", "--port", "10532"]);
 		expect(prepareUpstreamCliArgv(["status"]).argv).toEqual(["status"]);
 		expect(prepareUpstreamCliArgv(["logs", "--follow"]).argv).toEqual([
 			"logs",
@@ -54,6 +61,9 @@ describe("upstream CLI delegation", () => {
 		expect(brandUpstreamCliText("Proxy port. Default: 10531.")).toBe(
 			"Proxy port. Default: 10532.",
 		);
+		expect(
+			brandUpstreamCliText("Stop with `npx @carl-stone/openai-oauth stop`."),
+		).toBe("Stop with `npx posit-codex-gateway stop`.");
 		const updateNotice =
 			"A newer version of openai-oauth is available: 2.0.0 -> 2.1.0.\nRun `npx openai-oauth@latest` to use the newest version.";
 		expect(brandUpstreamCliText(updateNotice)).toBe(updateNotice);
@@ -139,7 +149,7 @@ describe("upstream CLI delegation", () => {
 
 	test("strips only the gateway diagnostics extension", () => {
 		expect(prepareUpstreamCliArgv(["--detach", "--diagnostics"])).toEqual({
-			argv: ["--detach", "--port", "10532"],
+			argv: ["--detach", "--port", "10532", "--responses-state", "memory"],
 			diagnostics: true,
 		});
 	});
