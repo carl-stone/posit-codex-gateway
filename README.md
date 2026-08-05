@@ -1,5 +1,6 @@
 # posit-codex-gateway
 
+Love Codex models, hate Codex API prices? ☀️ 🌍 🌙
 Use your existing ChatGPT/Codex subscription sign-in with RStudio Posit Assistant.
 
 `posit-codex-gateway` is a small local bridge. It starts the official [`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth) server and makes
