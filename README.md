@@ -66,25 +66,19 @@ it. The default port is `10532`, which matches the Posit Assistant URL above.
 You can choose another port with, for example, `--port 10533`; if you do,
 change the provider's base URL to match.
 
-## What the gateway changes
+## What you need to know
 
-Posit Assistant 0.9.8 sends the complete conversation and tool history with
-each request. The gateway therefore uses the normal stateless Responses path;
-it does not keep a second copy of your conversation or add continuation
-memory.
+The gateway connects Posit Assistant to your ChatGPT/Codex session and handles
+the request-format differences automatically. There is nothing special to
+configure in Posit Assistant beyond the local base URL shown above.
 
-Posit Assistant sends older, explicit prompt-cache controls. The current
-ChatGPT/Codex Responses service uses implicit caching. For Responses requests,
-the gateway:
+Your conversation is sent to ChatGPT/Codex as part of each request, but the
+gateway does not keep its own conversation history or memory. Messages,
+images, reasoning, tools, tool calls and results, and streaming responses are
+supported.
 
-- keeps `prompt_cache_key`, which identifies a reusable prompt prefix;
-- removes Posit's unsupported cache options and cache-breakpoint markers; and
-- keeps your messages, images, reasoning settings, tools, tool calls, tool
-  results, and streaming response behavior.
-
-All other routes and behavior—including sign-in, model discovery, chat
-completions, image requests, OAuth refresh, and transport—come from
-`openai-oauth`.
+Sign-in, model discovery, chat and image requests, OAuth refresh, and the
+connection to ChatGPT/Codex are provided by `openai-oauth`.
 
 ## Supported versions
 
