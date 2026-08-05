@@ -1,0 +1,58 @@
+{
+  "name": "posit-codex-gateway",
+  "version": "0.1.0",
+  "description": "Unofficial local gateway from RStudio Posit Assistant to ChatGPT/Codex OAuth",
+  "type": "module",
+  "license": "Apache-2.0",
+  "author": "Carl Stone",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/carl-stone/posit-codex-gateway.git"
+  },
+  "homepage": "https://github.com/carl-stone/posit-codex-gateway#readme",
+  "bugs": "https://github.com/carl-stone/posit-codex-gateway/issues",
+  "engines": {
+    "node": ">=20"
+  },
+  "bin": {
+    "posit-codex-gateway": "dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "NOTICE",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check:contract": "tsx scripts/check-contract.ts",
+    "lint": "biome check src test scripts",
+    "prepack": "npm run verify",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build"
+  },
+  "dependencies": {
+    "openai-oauth": "^2.0.0"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.2.0",
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  },
+  "keywords": [
+    "posit",
+    "rstudio",
+    "codex",
+    "oauth",
+    "gateway"
+  ]
+}

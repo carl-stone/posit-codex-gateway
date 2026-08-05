@@ -1,0 +1,86 @@
+{
+  "model": "gpt-5.6-luna",
+  "instructions": "You are helping in RStudio.",
+  "input": [
+    {
+      "role": "developer",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Keep the analysis reproducible.",
+          "prompt_cache_breakpoint": { "mode": "explicit" }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        { "type": "input_text", "text": "Inspect this plot." },
+        {
+          "type": "input_image",
+          "image_url": "data:image/png;base64,AA==",
+          "prompt_cache_breakpoint": { "mode": "explicit" }
+        }
+      ]
+    },
+    {
+      "type": "function_call",
+      "call_id": "call_1",
+      "name": "read_r_object",
+      "arguments": "{\"name\":\"fit\"}"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_1",
+      "output": {
+        "type": "text",
+        "value": "model summary",
+        "prompt_cache_breakpoint": { "mode": "explicit" }
+      }
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "name": "read_r_object",
+      "description": "Read an R object",
+      "parameters": {
+        "type": "object",
+        "properties": { "name": { "type": "string" } },
+        "required": ["name"]
+      }
+    }
+  ],
+  "tool_choice": "auto",
+  "parallel_tool_calls": true,
+  "reasoning": {
+    "effort": "high",
+    "summary": "detailed",
+    "context": "posit",
+    "unsupported": "remove"
+  },
+  "store": false,
+  "stream": true,
+  "stream_options": {
+    "reasoning_summary_delivery": "sequential_cutoff",
+    "include_usage": true
+  },
+  "include": ["reasoning.encrypted_content"],
+  "service_tier": "default",
+  "prompt_cache_key": "posit-session",
+  "prompt_cache_options": { "mode": "explicit", "ttl": "30m" },
+  "prompt_cache_retention": "24h",
+  "text": {
+    "verbosity": "medium",
+    "format": {
+      "type": "json_schema",
+      "name": "result",
+      "strict": true,
+      "schema": { "type": "object" },
+      "description": "remove"
+    },
+    "unsupported": true
+  },
+  "client_metadata": { "client": "posit-assistant", "protocol": "11.0" },
+  "metadata": { "private": "remove" }
+}
