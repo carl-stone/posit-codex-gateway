@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,16 +19,32 @@ const packageRoot = path.resolve(
 	path.dirname(fileURLToPath(import.meta.url)),
 	"..",
 );
+const require = createRequire(import.meta.url);
+
+const resolveOAuthPackageJson = (): string | undefined => {
+	for (const packageName of [
+		"openai-oauth/package.json",
+		"@carl-stone/openai-oauth/package.json",
+	]) {
+		try {
+			return require.resolve(packageName);
+		} catch {
+			// Try the next install layout.
+		}
+	}
+	return undefined;
+};
 
 export const runDoctor = async () => {
 	const positRoot =
 		process.env.POSIT_ASSISTANT_ROOT ??
 		path.join(os.homedir(), ".local", "share", "rstudio", "pai", "bin");
+	const oauthPackageJson = resolveOAuthPackageJson();
 	const [gateway, oauth, posit, protocol, health] = await Promise.all([
 		readJson<PackageInfo>(path.join(packageRoot, "package.json")),
-		readJson<PackageInfo>(
-			path.join(packageRoot, "node_modules", "openai-oauth", "package.json"),
-		),
+		oauthPackageJson == null
+			? Promise.resolve(undefined)
+			: readJson<PackageInfo>(oauthPackageJson),
 		readJson<PackageInfo>(path.join(positRoot, "package.json")),
 		readJson<ProtocolInfo>(path.join(positRoot, "protocol.json")),
 		fetch("http://127.0.0.1:10532/health", {
