@@ -3,10 +3,10 @@
 Love Codex models, hate Codex API prices? ☀️ 🌍 🌙
 Use your existing ChatGPT/Codex subscription sign-in with RStudio Posit Assistant.
 
-`posit-codex-gateway` is a small local bridge between RStudio and
-[`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth). It signs in with
-your ChatGPT account and adjusts Posit Assistant requests so they work with the
-Codex Responses service.
+`posit-codex-gateway` is a small local bridge between RStudio and the published
+[`@carl-stone/openai-oauth`](https://github.com/carl-stone/openai-oauth) runtime.
+It signs in with your ChatGPT account and adjusts Posit Assistant requests so
+they work with the Codex Responses service.
 
 > **Unofficial community project.** This project is not affiliated with,
 > endorsed by, or supported by Posit or OpenAI.
@@ -23,10 +23,15 @@ This gateway uses your ChatGPT/Codex sign-in. You do not need an OpenAI API key.
 
 ## Quick start
 
-With Node.js installed, run these commands in a Terminal window:
+The gateway is not published to npm yet. Until it is, install the current
+version from GitHub in a Terminal window:
 
 ```sh
-npm install --global posit-codex-gateway
+git clone https://github.com/carl-stone/posit-codex-gateway.git
+cd posit-codex-gateway
+npm ci
+npm run build
+npm install --global .
 posit-codex-gateway login
 posit-codex-gateway
 ```
@@ -79,13 +84,13 @@ recent Responses items so Posit Assistant can continue after a tool call. This
 record is not written to disk and disappears when the gateway stops.
 
 Sign-in, model discovery, chat and image requests, OAuth refresh, and the
-connection to ChatGPT/Codex are provided by `openai-oauth`.
+connection to ChatGPT/Codex are provided by the published OAuth runtime.
 
 ## Supported versions
 
 | Gateway | Posit Assistant | RStudio protocol | OAuth runtime | Responses adapter |
 | --- | --- | --- | --- | --- |
-| 0.1.x | 0.9.8 | 11.0 | `@carl-stone/openai-oauth` 2.0.0-memory.1 | v1 |
+| 0.1.x | 0.9.8 | 11.0 | `@carl-stone/openai-oauth` 2.0.0-memory.2 | v1 |
 
 The project checks that its requests still match Codex automatically in CI.
 
@@ -121,10 +126,10 @@ By default, the gateway listens only on your computer at `127.0.0.1`. It uses
 the same host behavior as `openai-oauth`; an explicit `--host` can make it
 reachable from other interfaces, so use that option only when you intend to.
 
-OAuth credentials and upstream transport are handled by `openai-oauth`.
-Recent Responses items are held only in the running process, with upstream's
-default limits of 256 responses and 2,000 items. They are never persisted by
-the gateway and are discarded when it stops or restarts.
+OAuth credentials and upstream transport are handled by the published OAuth
+runtime. Recent Responses items are held only in the running process, with
+default limits of 256 response-history entries and 2,000 items. They are never
+persisted by the gateway and are discarded when it stops or restarts.
 Diagnostics are off by default. If enabled with `--diagnostics`, they contain
 metadata only: request ID, model, schema-only removed-field patterns, cache
 breakpoint count, status, duration, and safely available token counts. Prompts,
@@ -160,11 +165,11 @@ the npm and GitHub Actions dependencies.
 
 ## Credits and license
 
-This project uses a narrowly scoped build of
-[`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth) by Evan Zhou and
-the OpenAI OAuth contributors while its Responses-memory change is pending
-upstream review. The dependency ships its own Apache-2.0 license and notice;
-this repository's required attribution is included in [NOTICE](NOTICE).
+This project uses
+[`@carl-stone/openai-oauth`](https://github.com/carl-stone/openai-oauth), a
+published fork of Evan Zhou's `openai-oauth`. The dependency ships its own
+Apache-2.0 license and notice; this repository's required attribution is
+included in [NOTICE](NOTICE).
 
 The original gateway code in this repository is copyright Carl Stone and is
 licensed under Apache-2.0. See [LICENSE](LICENSE).
