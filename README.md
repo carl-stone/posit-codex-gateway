@@ -1,38 +1,60 @@
 # posit-codex-gateway
 
-Want to use RStudio's Posit Assistant with your existing ChatGPT Plus/Pro subscription? Now you can! [`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth) provides a local server for translating the ChatGPT/Codex desktop app to /v1/responses, and this package provides a thin layer that adapts RStudio's Posit Assistant (v0.9.8) requests to that API.
+Use your existing ChatGPT/Codex sign-in with RStudio Posit Assistant.
 
-> **Unofficial community project.** This project is not affiliated with, endorsed by, or supported by Posit or OpenAI.
+`posit-codex-gateway` is a small local bridge. It starts the official
+[`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth) server and makes
+the one request-format adjustment needed by Posit Assistant.
+
+> **Unofficial community project.** This project is not affiliated with,
+> endorsed by, or supported by Posit or OpenAI.
+
+## Before you start
+
+You need:
+
+- Node.js 20 or newer;
+- RStudio with Posit Assistant 0.9.8 (RStudio protocol 11.0); and
+- a ChatGPT/Codex account that can sign in through `openai-oauth`.
+
+This gateway uses your ChatGPT/Codex sign-in. You do not need an OpenAI API
+key.
 
 ## Quick start
 
-Requires Node.js 20 or newer.
-
-Install the gateway:
+Install Node.js first if it is not already installed. Then run these commands
+in a Terminal window:
 
 ```sh
 npm install --global posit-codex-gateway
-```
-
-Log in with your ChatGPT or Codex account:
-
-```sh
 posit-codex-gateway login
-```
-
-Start the gateway:
-
-```sh
 posit-codex-gateway
 ```
 
-Leave this terminal window open while you use Posit Assistant. To run it in the background instead:
+The last command keeps the gateway running in the foreground. Leave that
+Terminal window open while you use Posit Assistant.
+
+To run it in the background instead, use:
 
 ```sh
 posit-codex-gateway --detach
 ```
 
-The gateway preserves the `openai-oauth` CLI lifecycle:
+### Connect Posit Assistant
+
+In RStudio, add or select an OpenAI-compatible provider for Posit Assistant.
+Use these settings:
+
+| Setting | Value |
+| --- | --- |
+| Base URL | `http://127.0.0.1:10532/v1` |
+| API key | Any placeholder, such as `local` |
+
+The gateway supplies the models available through your ChatGPT/Codex account.
+
+## Start, check, and stop the gateway
+
+These commands are useful when the gateway is running in the background:
 
 ```sh
 posit-codex-gateway status
@@ -40,61 +62,91 @@ posit-codex-gateway logs --follow
 posit-codex-gateway stop
 ```
 
-In RStudio Posit Assistant, add an OpenAI-compatible provider. Set its base URL to:
+Run `posit-codex-gateway` again to start it in the foreground after stopping
+it. The default port is `10532`, which matches the Posit Assistant URL above.
+You can choose another port with, for example, `--port 10533`; if you do,
+change the provider's base URL to match.
 
-```text
-http://127.0.0.1:10532/v1
-```
+## What the gateway changes
 
-The gateway does not need an API key. If RStudio requires one, enter any placeholder, such as `local`.
+Posit Assistant 0.9.8 sends the complete conversation and tool history with
+each request. The gateway therefore uses the normal stateless Responses path;
+it does not keep a second copy of your conversation or add continuation
+memory.
 
+Posit Assistant sends older, explicit prompt-cache controls. The current
+ChatGPT/Codex Responses service uses implicit caching. For Responses requests,
+the gateway:
 
-## Compatibility
+- keeps `prompt_cache_key`, which identifies a reusable prompt prefix;
+- removes Posit's unsupported cache options and cache-breakpoint markers; and
+- keeps your messages, images, reasoning settings, tools, tool calls, tool
+  results, and streaming response behavior.
 
-| posit-codex-gateway | Posit Assistant | RStudio protocol | openai-oauth | Codex Responses contract |
+All other routes and behavior—including sign-in, model discovery, chat
+completions, image requests, OAuth refresh, and transport—come from
+`openai-oauth`.
+
+## Supported versions
+
+| Gateway | Posit Assistant | RStudio protocol | openai-oauth | Responses adapter |
 | --- | --- | --- | --- | --- |
-| 0.1.x | 0.9.8 | 11.0 | 2.0.0 | Adapter v1, checked in CI |
+| 0.1.x | 0.9.8 | 11.0 | 2.0.0 | v1 |
 
-Posit Assistant 0.9.8 sends the full conversation and tool history on each turn. The gateway therefore uses `openai-oauth`'s default stateless Responses path and does not keep continuation memory.
+The gateway checks the current Codex Responses contract in CI. A contract
+check is also available through `doctor`.
 
-## What the adapter does
+## Troubleshooting
 
-Posit 0.9.8 emits explicit prompt-cache controls. The current ChatGPT/Codex Responses endpoint uses implicit caching instead. For `POST /v1/responses` only, the gateway:
-
-- preserves `prompt_cache_key`;
-- removes `prompt_cache_options`, deprecated `prompt_cache_retention`, and every recursive `prompt_cache_breakpoint`;
-- allowlists the current Codex root contract and supported nested reasoning, streaming, and text-format controls;
-- preserves messages, image inputs, tools, tool calls, tool arguments/results, `reasoning.encrypted_content`, and streaming; and
-- delegates the CLI and server to `openai-oauth`, while adapting only its outbound Codex Responses fetch.
-
-Every other route—including OAuth handling, models, chat completions, and images—is delegated directly to `openai-oauth`. Upstream continues to enforce its normal `store: false`, encrypted-reasoning, and streaming transport behavior.
-
-## CLI compatibility
-
-The gateway supports the same public commands and options as `openai-oauth` 2.0.0: foreground and detached serving, `status`, `logs`, `stop`, `login`, `--host`, `--port`, model and Codex overrides, OAuth overrides, browser control, and login timeout. The only intentional default difference is port 10532, which matches the RStudio provider configuration, instead of upstream's port 10531. `doctor` and `--diagnostics` are gateway-specific additions.
-
-## Doctor and troubleshooting
+Run the read-only diagnostic report with:
 
 ```sh
-npx posit-codex-gateway doctor
+posit-codex-gateway doctor
 ```
 
-`doctor` is read-only. It reports the gateway version, installed Posit Assistant version and protocol, installed `openai-oauth` version, local health at port 10532, and compatibility with the current `openai/codex` `ResponsesApiRequest`. It does not read conversations or credentials. The contract check uses GitHub; normal gateway startup does not require GitHub access.
+It reports the installed gateway, Posit Assistant, and `openai-oauth` versions,
+whether the local gateway is healthy, and whether the current Codex request
+contract matches the adapter. It does not read conversations or credentials.
+The contract check may contact GitHub; normal gateway startup does not need
+GitHub access.
 
-Common checks:
+Common fixes:
 
-- **Port already in use:** stop the existing gateway or run `npx posit-codex-gateway --port 10533` and update the provider URL.
-- **OAuth/login problem:** run `npx posit-codex-gateway login`, then restart the gateway.
-- **Provider cannot connect:** confirm the base URL is exactly `http://127.0.0.1:10532/v1` and run `doctor`.
-- **Contract drift:** update the adapter allowlists only after checking the corresponding `openai/codex` request type.
+- **RStudio cannot connect:** make sure the gateway is running and the base URL
+  is exactly `http://127.0.0.1:10532/v1`.
+- **The port is busy:** stop the other process, or start with
+  `posit-codex-gateway --port 10533` and update the base URL.
+- **Sign-in fails:** run `posit-codex-gateway login` again, then restart the
+  gateway.
+- **A background gateway is confusing:** run `status`, inspect `logs`, then
+  use `stop` before starting it again.
 
-## Network and diagnostics
+## Privacy and network behavior
 
-The gateway follows `openai-oauth` network behavior: it defaults to `127.0.0.1` and accepts the same explicit `--host` override. The adapter does not add Host, Origin, or content-type restrictions.
+By default, the gateway listens only on your computer at `127.0.0.1`. It uses
+the same host behavior as `openai-oauth`; an explicit `--host` can make it
+reachable from other interfaces, so use that option only when you intend to.
 
-Diagnostics are off by default. Enable metadata-only JSON lines with `--diagnostics` or `POSIT_CODEX_GATEWAY_DIAGNOSTICS=1`. Logged fields are limited to request ID, model, schema-only removed-field patterns, breakpoint count, status, duration, and token usage when safely available. User-defined property names are redacted. Prompts, content, tool arguments/results, credentials, headers, auth material, and reasoning content are never logged.
+OAuth credentials and upstream transport are handled by `openai-oauth`.
+Diagnostics are off by default. If enabled with `--diagnostics`, they contain
+metadata only: request ID, model, schema-only removed-field patterns, cache
+breakpoint count, status, duration, and safely available token counts. Prompts,
+conversation content, tool arguments/results, credentials, headers, auth
+material, and reasoning content are not logged.
 
-OAuth tokens and upstream errors remain managed by `openai-oauth`.
+The gateway is a local bridge, not a hosted proxy. Its local trust boundary is
+your computer and any interface you explicitly expose with `--host`.
+
+## Advanced CLI options
+
+The gateway accepts the same public commands and options as
+`openai-oauth` 2.0.0, including `login`, `--host`, `--port`, `--models`,
+`--codex-version`, `--base-url`, OAuth overrides, `--no-open`, login timeout,
+`--detach`, `status`, `logs`, and `stop`.
+
+The only intentional default difference is the port: this gateway uses
+`10532` instead of `openai-oauth`'s `10531` so it matches the Posit Assistant
+configuration. `doctor` and `--diagnostics` are gateway-specific additions.
 
 ## Development
 
@@ -105,10 +157,15 @@ npm run check:contract
 npm pack --dry-run
 ```
 
-CI runs tests, typechecking, linting, and the unbundled TypeScript build. A separate scheduled/manual workflow checks the current Codex contract. Dependabot watches npm dependencies and GitHub Actions.
+CI runs tests, typechecking, linting, and the TypeScript build. A separate
+scheduled/manual workflow checks for Codex contract drift. Dependabot watches
+the npm and GitHub Actions dependencies.
 
 ## Credits and license
 
-Built around [`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth) by Evan Zhou. The Posit request-adaptation logic was extracted and rewritten from Apache-2.0 work developed in the `carl-stone/openai-oauth` fork; see [NOTICE](NOTICE).
+Built around [`openai-oauth`](https://github.com/EvanZhouDev/openai-oauth) by
+Evan Zhou. The Posit request-adaptation logic was extracted and rewritten from
+Apache-2.0 work developed in the `carl-stone/openai-oauth` fork; see
+[NOTICE](NOTICE).
 
 Licensed under Apache-2.0.
