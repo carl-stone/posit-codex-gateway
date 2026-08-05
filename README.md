@@ -1,6 +1,6 @@
 # posit-codex-gateway
 
-Love Codex models, hate Codex API prices? ☀️ 🌍 🌙
+Love Codex models, hate API prices? ☀️ 🌍 🌙
 Use your existing ChatGPT/Codex subscription sign-in with RStudio Posit Assistant.
 
 `posit-codex-gateway` is a small local bridge between RStudio and the published
@@ -23,15 +23,10 @@ This gateway uses your ChatGPT/Codex sign-in. You do not need an OpenAI API key.
 
 ## Quick start
 
-The gateway is not published to npm yet. Until it is, install the current
-version from GitHub in a Terminal window:
+With Node.js installed, run these commands in a Terminal window:
 
 ```sh
-git clone https://github.com/carl-stone/posit-codex-gateway.git
-cd posit-codex-gateway
-npm ci
-npm run build
-npm install --global .
+npm install --global posit-codex-gateway
 posit-codex-gateway login
 posit-codex-gateway
 ```
