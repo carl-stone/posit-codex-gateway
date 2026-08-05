@@ -86,8 +86,8 @@ connection to ChatGPT/Codex are provided by `openai-oauth`.
 | --- | --- | --- | --- | --- |
 | 0.1.x | 0.9.8 | 11.0 | 2.0.0 | v1 |
 
-The gateway checks the current Codex Responses contract in CI. A contract
-check is also available through `doctor`.
+The project automatically checks that its requests still match Codex. You can
+run the same check yourself with `posit-codex-gateway doctor`.
 
 ## Troubleshooting
 
