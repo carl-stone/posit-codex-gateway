@@ -145,8 +145,6 @@ not necessarily incompatible.
   1.6-shaped GPT-6 request, including `apply_patch`, structured tool results,
   file input, encrypted reasoning, and explicit cache controls. Both fixtures
   also run through the detached CLI against a local mock Codex endpoint.
-- **Upstream contract check:** compares the adapter's root fields with current
-  Codex source. This checks schema drift, not authenticated backend behavior.
 
 The 1.6.1 smoke test is not exhaustive tool or model coverage. Assistant 1.6.0
 and newer RStudio Assistant installations have not been live-tested.
@@ -254,7 +252,6 @@ built-in version; `--codex-version <version>` overrides it when needed.
 ```sh
 npm ci
 npm run verify
-npm run check:contract
 npm audit
 npm pack --dry-run
 ```
@@ -274,9 +271,8 @@ users install a dependency. The overrides are scoped to each SDK parent to
 avoid npm's resolver loop with global overrides and bundled dependencies. The
 packaged-install test guards against accidentally shipping the old dependency.
 
-CI also performs an npm package dry run. A separate scheduled/manual workflow
-checks that every root field forwarded by the adapter remains present in
-Codex's source contract. Dependabot watches npm and GitHub Actions dependencies.
+CI also performs an npm package dry run. Dependabot watches npm and GitHub
+Actions dependencies.
 
 ## Credits and license
 
