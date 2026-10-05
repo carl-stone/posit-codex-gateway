@@ -1,6 +1,6 @@
 {
   "name": "r-assistant-gateway",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Unofficial local gateway from Posit Assistant in RStudio and Positron to ChatGPT/Codex OAuth",
   "type": "module",
   "license": "Apache-2.0",
@@ -36,18 +36,38 @@
     "prepack": "npm run verify",
     "test": "vitest run",
     "test:cli": "tsx scripts/test-cli-lifecycle.ts",
+    "test:package": "tsx scripts/test-package.ts",
     "typecheck": "tsc --noEmit",
-    "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run test:cli"
+    "verify": "npm run typecheck && npm run lint && npm test && npm run build && npm run test:cli && npm run test:package"
   },
   "dependencies": {
-    "openai-oauth": "npm:@carl-stone/openai-oauth@2.0.0-memory.2"
+    "openai-oauth": "npm:@carl-stone/openai-oauth@2.0.0-memory.2",
+    "zod": "4.6.5"
   },
+  "overrides": {
+    "@openai-oauth/ai-sdk": {
+      "@ai-sdk/provider-utils": "4.0.57",
+      "@ai-sdk/openai": {
+        "@ai-sdk/provider-utils": "4.0.57"
+      }
+    },
+    "ai": {
+      "@ai-sdk/provider-utils": "4.0.57",
+      "@ai-sdk/gateway": {
+        "@ai-sdk/provider-utils": "4.0.57"
+      }
+    }
+  },
+  "bundleDependencies": [
+    "openai-oauth",
+    "zod"
+  ],
   "devDependencies": {
-    "@biomejs/biome": "^2.5.13",
-    "@types/node": "^24.13.4",
-    "tsx": "^4.23.13",
+    "@biomejs/biome": "^2.5.15",
+    "@types/node": "^24.19.1",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.3"
   },
   "keywords": [
     "r",

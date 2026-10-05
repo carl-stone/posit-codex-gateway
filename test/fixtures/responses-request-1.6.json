@@ -1,0 +1,76 @@
+{
+  "model": "gpt-6-astra",
+  "input": [
+    {
+      "role": "developer",
+      "content": [
+        {
+          "type": "input_text",
+          "text": "Use apply_patch to edit this data-analysis project.",
+          "prompt_cache_breakpoint": { "mode": "explicit" }
+        }
+      ]
+    },
+    {
+      "role": "user",
+      "content": [
+        { "type": "input_text", "text": "Add a plot title." },
+        {
+          "type": "input_file",
+          "filename": "analysis.R",
+          "file_data": "data:text/plain;base64,cGxvdCgxOjMp"
+        }
+      ]
+    },
+    {
+      "type": "reasoning",
+      "id": "rs_test",
+      "summary": [],
+      "encrypted_content": "synthetic-encrypted-reasoning"
+    },
+    {
+      "type": "function_call",
+      "call_id": "call_patch",
+      "name": "apply_patch",
+      "arguments": "{\"patch\":\"*** Begin Patch\\n*** Update File: analysis.R\\n@@\\n-plot(1:3)\\n+plot(1:3, main = \\\"Example\\\")\\n*** End Patch\"}"
+    },
+    {
+      "type": "function_call_output",
+      "call_id": "call_patch",
+      "output": [
+        {
+          "type": "input_text",
+          "text": "Applied patch to analysis.R.",
+          "prompt_cache_breakpoint": { "mode": "explicit" }
+        }
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "name": "apply_patch",
+      "description": "Apply a Codex-style patch to text files.",
+      "parameters": {
+        "type": "object",
+        "properties": { "patch": { "type": "string" } },
+        "required": ["patch"],
+        "additionalProperties": false
+      }
+    }
+  ],
+  "tool_choice": "auto",
+  "parallel_tool_calls": true,
+  "max_output_tokens": 128000,
+  "reasoning": {
+    "effort": "xhigh",
+    "summary": "detailed",
+    "context": "all_turns",
+    "mode": "adaptive"
+  },
+  "store": false,
+  "stream": true,
+  "include": ["reasoning.encrypted_content"],
+  "prompt_cache_key": "test-session-1.6",
+  "prompt_cache_options": { "mode": "explicit", "ttl": "30m" }
+}

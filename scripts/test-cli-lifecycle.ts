@@ -18,15 +18,22 @@ const root = await mkdtemp(path.join(os.tmpdir(), "r-assistant-gateway-cli-"));
 const runtimeDirectory = path.join(root, "runtime");
 const authFilePath = path.join(root, "auth.json");
 const positRoot = path.join(root, "posit-assistant");
-const cliPath = path.resolve("dist/cli.js");
+const cliPath = path.resolve(
+	process.env.GATEWAY_TEST_CLI_PATH ?? "dist/cli.js",
+);
 const packageVersion = (
 	JSON.parse(await readFile("package.json", "utf8")) as { version: string }
 ).version;
 const positRequest = JSON.parse(
 	await readFile("test/fixtures/responses-request.json", "utf8"),
 ) as Record<string, unknown>;
+// Synthetic fixture based on the 1.6 Assistant client, not a captured conversation.
+const posit16Request = JSON.parse(
+	await readFile("test/fixtures/responses-request-1.6.json", "utf8"),
+) as Record<string, unknown>;
 const env = {
 	...process.env,
+	POSITRON_EXTENSIONS_DIR: path.join(root, "extensions"),
 	R_ASSISTANT_GATEWAY_INTERNAL_RUNTIME_DIR: runtimeDirectory,
 	POSIT_ASSISTANT_ROOT: positRoot,
 };
@@ -84,7 +91,7 @@ await Promise.all([
 	),
 	writeFile(
 		path.join(positRoot, "package.json"),
-		JSON.stringify({ version: "1.3.0" }),
+		JSON.stringify({ version: "1.6.1" }),
 	),
 ]);
 
@@ -102,7 +109,7 @@ try {
 		"--port",
 		"0",
 		"--models",
-		"gpt-5.6-sol",
+		"gpt-5.6-sol,gpt-6-astra",
 		"--base-url",
 		`http://127.0.0.1:${codexPort}`,
 		"--oauth-file",
@@ -140,7 +147,8 @@ try {
 	};
 	if (
 		!modelsResponse.ok ||
-		!models.data?.some((model) => model.id === "gpt-5.6-sol")
+		!models.data?.some((model) => model.id === "gpt-5.6-sol") ||
+		!models.data?.some((model) => model.id === "gpt-6-astra")
 	) {
 		throw new Error("Gateway did not support placeholder-key model discovery.");
 	}
@@ -233,6 +241,65 @@ try {
 		!JSON.stringify(continuedBody).includes('"function_call_output"')
 	) {
 		throw new Error("Detached gateway did not replay the tool continuation.");
+	}
+
+	const posit16Response = await fetch(`${gatewayUrl}/responses`, {
+		method: "POST",
+		headers: { "content-type": "application/json" },
+		body: JSON.stringify(posit16Request),
+	});
+	if (
+		!posit16Response.ok ||
+		!(await posit16Response.text()).includes("response.completed")
+	) {
+		throw new Error("Gateway rejected the synthetic Assistant 1.6 request.");
+	}
+	const forwarded16 = receivedBodies[2];
+	const serialized16 = JSON.stringify(forwarded16);
+	if (
+		forwarded16?.model !== "gpt-6-astra" ||
+		JSON.stringify(forwarded16.tools) !==
+			JSON.stringify(posit16Request.tools) ||
+		forwarded16.prompt_cache_key !== "test-session-1.6" ||
+		serialized16.includes("prompt_cache_breakpoint") ||
+		serialized16.includes("prompt_cache_options") ||
+		serialized16.includes("max_output_tokens") ||
+		JSON.stringify(forwarded16.reasoning) !==
+			JSON.stringify({
+				effort: "xhigh",
+				summary: "detailed",
+				context: "all_turns",
+			})
+	) {
+		throw new Error(
+			"Gateway changed the Assistant 1.6 model, tools, or reasoning.",
+		);
+	}
+	const forwarded16Input = forwarded16.input as Array<Record<string, unknown>>;
+	const expected16Input = posit16Request.input as Array<
+		Record<string, unknown>
+	>;
+	for (const index of [1, 2, 3]) {
+		if (
+			JSON.stringify(forwarded16Input[index]) !==
+			JSON.stringify(expected16Input[index])
+		) {
+			throw new Error(
+				"Gateway changed the Assistant 1.6 file, reasoning, or patch payload.",
+			);
+		}
+	}
+	if (
+		JSON.stringify(forwarded16Input[4]) !==
+		JSON.stringify({
+			type: "function_call_output",
+			call_id: "call_patch",
+			output: [{ type: "input_text", text: "Applied patch to analysis.R." }],
+		})
+	) {
+		throw new Error(
+			"Gateway changed the Assistant 1.6 structured patch result.",
+		);
 	}
 
 	const status = await run(["status"]);

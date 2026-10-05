@@ -6,6 +6,7 @@ import {
 	runDoctor,
 	SUPPORTED_OPENAI_OAUTH_VERSION,
 	SUPPORTED_POSIT_ASSISTANT_VERSION,
+	SUPPORTED_POSIT_ASSISTANT_VERSIONS,
 } from "../src/doctor.js";
 
 let positRoot: string;
@@ -62,12 +63,14 @@ describe("doctor gateway compatibility", () => {
 		const report = await runDoctor();
 
 		expect(report.positAssistant).toEqual({
-			version: "1.3.0",
+			version: SUPPORTED_POSIT_ASSISTANT_VERSION,
 			path: positRoot,
 		});
 		expect(report.compatibility).toMatchObject({
 			supported: true,
-			expectedPositAssistantVersion: "1.3.0",
+			expectedPositAssistantVersion: SUPPORTED_POSIT_ASSISTANT_VERSION,
+			expectedPositronAssistantVersion: SUPPORTED_POSIT_ASSISTANT_VERSION,
+			supportedPositAssistantVersions: SUPPORTED_POSIT_ASSISTANT_VERSIONS,
 			expectedOpenaiOauthVersion: SUPPORTED_OPENAI_OAUTH_VERSION,
 		});
 		expect(report.localHealth).toMatchObject({ reachable: true, status: 200 });
@@ -76,14 +79,14 @@ describe("doctor gateway compatibility", () => {
 	test("reports an untested Posit Assistant version", async () => {
 		await writeFile(
 			path.join(positRoot, "package.json"),
-			JSON.stringify({ version: "1.3.1" }),
+			JSON.stringify({ version: "1.7.0" }),
 		);
 
 		const report = await runDoctor();
 
 		expect(report.compatibility).toMatchObject({
 			supported: false,
-			expectedPositAssistantVersion: "1.3.0",
+			expectedPositAssistantVersion: SUPPORTED_POSIT_ASSISTANT_VERSION,
 			expectedOpenaiOauthVersion: SUPPORTED_OPENAI_OAUTH_VERSION,
 		});
 	});
@@ -141,6 +144,24 @@ const installExtension = async (version: string) => {
 	);
 	return { name, directory };
 };
+
+test.each(SUPPORTED_POSIT_ASSISTANT_VERSIONS)(
+	"recognizes Assistant %s in either IDE",
+	async (version) => {
+		await writeFile(
+			path.join(positRoot, "package.json"),
+			JSON.stringify({ version }),
+		);
+		expect((await runDoctor()).compatibility.supported).toBe(true);
+
+		await rm(path.join(positRoot, "package.json"));
+		await installExtension(version);
+		const report = await runDoctor();
+		expect(report.positAssistant.version).toBe("not installed");
+		expect(report.positronAssistant.version).toBe(version);
+		expect(report.compatibility.supported).toBe(true);
+	},
+);
 
 test("supports Positron without an RStudio installation", async () => {
 	const extension = await installExtension("1.3.1");

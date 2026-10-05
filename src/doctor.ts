@@ -9,8 +9,17 @@ import { resolveGatewayRuntimeDirectory } from "./upstream-cli.js";
 type PackageInfo = { version?: string; name?: string; publisher?: string };
 type RuntimeInfo = { url?: string };
 
-export const SUPPORTED_POSIT_ASSISTANT_VERSION = "1.3.0";
-export const SUPPORTED_POSITRON_ASSISTANT_VERSION = "1.3.1";
+// Both IDEs use the same Assistant Responses contract. Keep recognition explicit:
+// an unknown release is unvalidated, not necessarily incompatible.
+export const SUPPORTED_POSIT_ASSISTANT_VERSIONS: readonly string[] = [
+	"1.3.0",
+	"1.3.1",
+	"1.6.0",
+	"1.6.1",
+];
+export const SUPPORTED_POSIT_ASSISTANT_VERSION = "1.6.1";
+export const SUPPORTED_POSITRON_ASSISTANT_VERSION =
+	SUPPORTED_POSIT_ASSISTANT_VERSION;
 export const SUPPORTED_OPENAI_OAUTH_VERSION = "2.0.0-memory.2";
 
 const readJson = async <T>(file: string): Promise<T | undefined> => {
@@ -193,9 +202,12 @@ export const runDoctor = async () => {
 		positronAssistant,
 		compatibility: {
 			supported:
-				(positVersion === SUPPORTED_POSIT_ASSISTANT_VERSION ||
-					positronAssistant.version === SUPPORTED_POSITRON_ASSISTANT_VERSION) &&
+				(SUPPORTED_POSIT_ASSISTANT_VERSIONS.includes(positVersion) ||
+					SUPPORTED_POSIT_ASSISTANT_VERSIONS.includes(
+						positronAssistant.version,
+					)) &&
 				oauthVersion === SUPPORTED_OPENAI_OAUTH_VERSION,
+			supportedPositAssistantVersions: SUPPORTED_POSIT_ASSISTANT_VERSIONS,
 			expectedPositAssistantVersion: SUPPORTED_POSIT_ASSISTANT_VERSION,
 			expectedPositronAssistantVersion: SUPPORTED_POSITRON_ASSISTANT_VERSION,
 			expectedOpenaiOauthVersion: SUPPORTED_OPENAI_OAUTH_VERSION,

@@ -23,8 +23,9 @@ You need:
 - RStudio or Positron with Posit Assistant installed; and
 - a ChatGPT/Codex Plus or Pro subscription.
 
-Tested with Posit Assistant **1.3.0 and 1.3.1**. Compatibility with older
-versions is unknown.
+Posit Assistant **1.6.0 and 1.6.1** are recognized in either IDE, alongside
+**1.3.0 and 1.3.1**. See [compatibility validation](#compatibility-validation)
+for the distinction between live testing and synthetic regression coverage.
 
 The gateway uses your ChatGPT/Codex sign-in. You do not need an OpenAI API key.
 
@@ -76,45 +77,18 @@ for the provider dialog.
 
 ### A model is missing from the Positron selector
 
-Posit Assistant 1.3.1 in Positron filters OpenAI model discovery to IDs beginning
-with `gpt-5`, `gpt-4`, or `o`. This hides `gpt-6-astra` even when the gateway
-correctly lists it. Add the model explicitly using **Open AI Provider Settings
-(JSON)**, which opens `~/.posit/ai/providers.json`.
+Posit Assistant 1.6.1 discovers GPT-6 models through the OpenAI provider,
+including `gpt-6-astra`; no custom-model entry is needed. Use **Reload model
+list** in the model menu after changing provider settings. Assistant 1.6.1
+also fixes model lists that appeared empty during slow startup credential checks.
 
-Merge this example into your existing `providers.openai` settings, preserving
-any other providers or custom models:
-
-```json
-{
-  "providers": {
-    "openai": {
-      "baseUrl": "http://127.0.0.1:10532/v1",
-      "models": {
-        "custom": [
-          {
-            "id": "gpt-6-astra",
-            "name": "GPT-6 Astra",
-            "protocol": "openai-responses",
-            "maxContextLength": 272000,
-            "supportsTools": true,
-            "supportsImages": true,
-            "supportsToolResultImages": true,
-            "supportsWebSearch": false,
-            "thinkingEffortLevels": ["low", "medium", "high", "xhigh", "max", "ultra"]
-          }
-        ]
-      }
-    }
-  }
-}
-```
-
-Reopen the model selector; if needed, run **Developer: Reload Window**. This
-adds Astra alongside automatically discovered models. It does not grant access
-to models unavailable to your account. The example reflects the Astra metadata
-used in the September 2026 validation; check current model capabilities when
-adding other models. See Posit’s
+Assistant 1.3.1 only discovers IDs beginning with `gpt-5`, `gpt-4`, or `o`,
+so GPT-6 models are hidden on that older version. Upgrade Assistant, or add a
+custom model using **Open AI Provider Settings (JSON)**. Preserve existing
+provider settings and use current model capabilities rather than an old
+context-limit example. See Posit’s
 [custom model settings reference](https://assistant.posit.co/docs/reference/providers-settings/).
+Custom entries do not grant access to models unavailable to your account.
 
 ## Start, check, and stop the gateway
 
@@ -158,16 +132,24 @@ transport, and server lifecycle. The gateway defaults its optional Responses
 history to process-local memory so ID-based continuations can be resolved when
 needed. That history is discarded whenever the gateway stops.
 
-## Tested versions
+## Compatibility validation
 
-Gateway 0.2.x has been tested with Posit Assistant **1.3.0 and 1.3.1**.
-Compatibility with older versions is unknown. These are tested configurations,
-not minimum version requirements:
+Gateway 0.3.x recognizes Posit Assistant **1.3.0, 1.3.1, 1.6.0, and 1.6.1**
+using the same version list for both IDEs. These are explicit recognized
+versions, not minimum version requirements; other releases are unvalidated,
+not necessarily incompatible.
 
-| IDE | Tested Posit Assistant version |
-| --- | --- |
-| RStudio | 1.3.0 |
-| Positron | 1.3.1 |
+- **Live IDE testing:** Assistant 1.3.0 in RStudio and 1.3.1 in Positron.
+  A basic live smoke test with Assistant 1.6.1 in Positron was also confirmed.
+- **Synthetic regression testing:** the 1.3 Responses request and the newer
+  1.6-shaped GPT-6 request, including `apply_patch`, structured tool results,
+  file input, encrypted reasoning, and explicit cache controls. Both fixtures
+  also run through the detached CLI against a local mock Codex endpoint.
+- **Upstream contract check:** compares the adapter's root fields with current
+  Codex source. This checks schema drift, not authenticated backend behavior.
+
+The 1.6.1 smoke test is not exhaustive tool or model coverage. Assistant 1.6.0
+and newer RStudio Assistant installations have not been live-tested.
 
 ## Troubleshooting
 
@@ -180,10 +162,11 @@ r-assistant-gateway doctor
 It reports the installed gateway and OAuth runtime versions, Posit Assistant
 in RStudio (`positAssistant`) and Positron (`positronAssistant`), and the active
 gateway’s health. Each Assistant entry includes its version and installation
-path. The compatibility check recognizes the tested configurations: RStudio
-Assistant 1.3.0 or Positron Assistant 1.3.1, alongside the expected OAuth runtime.
-An unrecognized Assistant version is untested, not necessarily incompatible. An older or
-missing installation in the other IDE does not prevent success. The command
+path. The compatibility check accepts any version in
+`supportedPositAssistantVersions` from either IDE, alongside the expected OAuth
+runtime. An unrecognized Assistant version is unvalidated, not necessarily
+incompatible. An older or missing installation in the other IDE does not
+prevent success. The command
 still exits unsuccessfully if the gateway health check fails.
 
 Positron detection checks `~/.positron/extensions`, using the extension registry
@@ -203,9 +186,9 @@ Common fixes:
   gateway.
 - **A conversation fails after restarting the gateway:** start a new Posit
   Assistant conversation. Temporary continuation state is cleared on restart.
-- **`doctor` does not recognize your Assistant version:** versions 1.3.0 and
-  1.3.1 are tested; compatibility with older versions is unknown. A failed
-  version check does not establish that your installation cannot work.
+- **`doctor` does not recognize your Assistant version:** versions 1.3.0,
+  1.3.1, 1.6.0, and 1.6.1 are recognized in either IDE. A failed version check
+  does not establish that your installation cannot work.
   For an administrator-managed or otherwise nonstandard installation, set
   `POSIT_ASSISTANT_ROOT` to RStudio’s `pai/bin` directory, or
   `POSITRON_EXTENSIONS_DIR` to Positron’s extension directory, before running
@@ -251,6 +234,11 @@ stateless` disables continuation by response or item IDs, so `doctor` does not
 consider that configuration healthy for Posit Assistant. `doctor` and
 `--diagnostics` are specific to this gateway.
 
+Model discovery automatically resolves the latest stable Codex client version
+from npm, caching it for one hour. Installing or updating the Codex CLI is not
+required. If registry discovery fails, the runtime falls back to its older
+built-in version; `--codex-version <version>` overrides it when needed.
+
 ### OAuth runtime limitations
 
 - Use an IPv4 host such as the default `127.0.0.1`. The pinned OAuth runtime
@@ -264,17 +252,31 @@ consider that configuration healthy for Posit Assistant. `doctor` and
 ## Development
 
 ```sh
-npm install
+npm ci
 npm run verify
 npm run check:contract
+npm audit
 npm pack --dry-run
 ```
 
 `npm run verify` performs typechecking, linting, unit tests, a TypeScript build,
-and a detached end-to-end CLI test using a synthetic Responses API request.
+and detached CLI tests with synthetic Assistant 1.3 and 1.6 Responses requests.
+It also packs the gateway, installs it in an isolated consumer project, audits
+that installation, verifies the security-patched dependency, and reruns the
+CLI lifecycle against the installed package. No real credentials or ChatGPT
+requests are used by these tests.
+
+The OAuth runtime remains pinned to the memory-enabled fork. An npm override
+pins `@ai-sdk/provider-utils` to patched 4.0.57 for GHSA-866g-f22w-33x8. The
+runtime and its production dependency tree, including its explicit `zod` peer,
+are bundled into the npm package because overrides alone do not apply when
+users install a dependency. The overrides are scoped to each SDK parent to
+avoid npm's resolver loop with global overrides and bundled dependencies. The
+packaged-install test guards against accidentally shipping the old dependency.
+
 CI also performs an npm package dry run. A separate scheduled/manual workflow
-verifies that every root field forwarded by the adapter remains accepted by
-Codex. Dependabot watches npm and GitHub Actions dependencies.
+checks that every root field forwarded by the adapter remains present in
+Codex's source contract. Dependabot watches npm and GitHub Actions dependencies.
 
 ## Credits and license
 

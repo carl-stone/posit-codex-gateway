@@ -2,12 +2,9 @@ import { readFile } from "node:fs/promises";
 import { describe, expect, test } from "vitest";
 import { adaptResponsesBody } from "../src/adapter.js";
 
-const fixture = async () =>
+const fixture = async (name = "responses-request.json") =>
 	JSON.parse(
-		await readFile(
-			new URL("./fixtures/responses-request.json", import.meta.url),
-			"utf8",
-		),
+		await readFile(new URL(`./fixtures/${name}`, import.meta.url), "utf8"),
 	) as Record<string, unknown>;
 
 describe("adaptResponsesBody", () => {
@@ -52,6 +49,48 @@ describe("adaptResponsesBody", () => {
 			call_id: "call_1",
 			output: [{ type: "input_text", text: "model summary" }],
 		});
+	});
+
+	test("preserves the synthetic Assistant 1.6 GPT-6 apply_patch contract", async () => {
+		const request = await fixture("responses-request-1.6.json");
+		const original = structuredClone(request);
+		const adapted = adaptResponsesBody(request);
+
+		expect(request).toEqual(original);
+		expect(adapted.body.model).toBe("gpt-6-astra");
+		expect(adapted.body.tools).toEqual(request.tools);
+		expect(adapted.body.reasoning).toEqual({
+			effort: "xhigh",
+			summary: "detailed",
+			context: "all_turns",
+		});
+		expect(adapted.body.prompt_cache_key).toBe("test-session-1.6");
+		expect(adapted.body.input).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({
+					type: "reasoning",
+					encrypted_content: "synthetic-encrypted-reasoning",
+				}),
+				expect.objectContaining({ type: "function_call", name: "apply_patch" }),
+				{
+					type: "function_call_output",
+					call_id: "call_patch",
+					output: [
+						{ type: "input_text", text: "Applied patch to analysis.R." },
+					],
+				},
+			]),
+		);
+		const input = adapted.body.input as Array<Record<string, unknown>>;
+		expect(input[1]).toEqual((request.input as unknown[])[1]);
+		expect(input[3]).toEqual((request.input as unknown[])[3]);
+		expect(adapted.promptCacheBreakpointCount).toBe(2);
+		expect(adapted.removedFieldPaths).toEqual([
+			"$.*",
+			"**.prompt_cache_breakpoint",
+			"prompt_cache_options",
+			"reasoning.*",
+		]);
 	});
 
 	test("removes markers only from Posit Responses content parts", () => {
